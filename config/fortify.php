@@ -116,6 +116,7 @@ return [
 
     'limiters' => [
         'login' => 'login',
+        'otp' => 'otp',
         /* @chisel-2fa */
         'two-factor' => 'two-factor',
         /* @end-chisel-2fa */
@@ -168,7 +169,6 @@ return [
 
     'features' => [
         /* @chisel-registration */
-        Features::registration(),
         /* @end-chisel-registration */
         Features::resetPasswords(),
         /* @chisel-email-verification */
