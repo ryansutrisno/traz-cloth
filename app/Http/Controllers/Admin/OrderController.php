@@ -6,15 +6,18 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\PaymentType;
 use App\Http\Controllers\Controller;
+use App\Models\Address;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
 use App\Models\Payment;
+use App\Services\BiteshipService;
 use App\Services\OrderService;
 use DomainException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -36,7 +39,10 @@ class OrderController extends Controller
         'dibatalkan_sistem' => 'Dibatalkan Sistem',
     ];
 
-    public function __construct(private OrderService $orderService) {}
+    public function __construct(
+        private OrderService $orderService,
+        private BiteshipService $biteshipService,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -86,10 +92,128 @@ class OrderController extends Controller
 
     public function show(Order $order): Response
     {
-        $order->load(['user', 'items.campaign', 'payments', 'statusHistories']);
+        $order->load(['user', 'address', 'items.campaign', 'payments', 'statusHistories']);
+
+        return Inertia::render('admin/orders/show', $this->orderShowProps($order));
+    }
+
+    public function courierRates(Request $request, Order $order): Response|RedirectResponse
+    {
+        $order->load(['user', 'address', 'items.campaign', 'payments', 'statusHistories']);
+
+        if ($order->status !== OrderStatus::Lunas || $order->address === null) {
+            return back()->withErrors(['courier' => 'Kurir hanya bisa dihitung untuk order lunas dengan alamat pengiriman.']);
+        }
+
+        try {
+            $rates = $this->biteshipService->getRates(
+                $this->shippingItems($order),
+                $order->address->postal_code,
+            );
+        } catch (DomainException $exception) {
+            return back()->withErrors(['courier' => $exception->getMessage()]);
+        }
+
+        return Inertia::render('admin/orders/show', $this->orderShowProps($order, $rates));
+    }
+
+    public function bookCourier(Request $request, Order $order): RedirectResponse
+    {
+        $order->load(['address', 'items.campaign', 'payments', 'statusHistories']);
+
+        if ($order->status !== OrderStatus::Lunas || $order->address === null) {
+            return back()->withErrors(['courier' => 'Kurir hanya bisa di-book untuk order lunas dengan alamat pengiriman.']);
+        }
+
+        $data = $request->validate([
+            'courier_code' => ['required', 'string'],
+            'courier_service' => ['required', 'string'],
+            'shipping_cost' => ['required', 'numeric', 'min:0'],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        try {
+            $rates = $this->biteshipService->getRates(
+                $this->shippingItems($order),
+                $order->address->postal_code,
+            );
+        } catch (DomainException $exception) {
+            return back()->withErrors(['courier' => $exception->getMessage()]);
+        }
+
+        $rate = collect($rates)->first(fn (array $rate): bool => $rate['courier_code'] === $data['courier_code']
+            && $rate['courier_service_code'] === $data['courier_service']);
+
+        if ($rate === null) {
+            return back()->withErrors(['courier' => 'Kurir tidak valid, hitung ulang ongkir.']);
+        }
+
+        $shippingCost = $rate['price'];
+
+        try {
+            DB::transaction(function () use ($data, $order, $shippingCost): void {
+                $result = $this->biteshipService->bookCourier(
+                    $order,
+                    $data['courier_code'],
+                    $data['courier_service'],
+                    [
+                        'address' => $order->address,
+                        'note' => $data['note'] ?? null,
+                    ],
+                );
+                $waybillId = $result['waybill_id'] ?? null;
+                $order->forceFill([
+                    'biteship_order_id' => $result['order_id'],
+                    'resi_number' => $waybillId,
+                    'courier_code' => $data['courier_code'],
+                    'courier_service' => $data['courier_service'],
+                    'shipping_cost' => $shippingCost,
+                    'shipped_at' => now(),
+                ])->save();
+                $this->orderService->markDikirim(
+                    $order,
+                    'Booking kurir '.strtoupper($data['courier_code']).' - resi '.(string) $waybillId,
+                );
+            });
+        } catch (DomainException $exception) {
+            return back()->withErrors(['courier' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('admin.orders.show', $order)
+            ->with('status', 'Kurir di-book, resi: '.($order->resi_number ?? 'menunggu resi').'.');
+    }
+
+    public function transition(Request $request, Order $order): RedirectResponse
+    {
+        $data = $request->validate([
+            'status' => ['required', Rule::enum(OrderStatus::class)],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+        $status = OrderStatus::from($data['status']);
+
+        if (! in_array($status->value, $this->orderService->allowedTransitions($order), true)) {
+            return back()->withErrors(['status' => 'Transisi tidak valid.']);
+        }
+
+        try {
+            $this->orderService->transition($order, $status, $data['note'] ?? null);
+        } catch (DomainException $exception) {
+            return back()->withErrors(['status' => $exception->getMessage()]);
+        }
+
+        return back()->with('status', 'Status order diperbarui.');
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>|null  $courierRates
+     * @return array<string, mixed>
+     */
+    private function orderShowProps(Order $order, ?array $courierRates = null): array
+    {
         $canPayRemaining = $this->canPayRemaining($order);
 
-        return Inertia::render('admin/orders/show', [
+        return [
             'order' => [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
@@ -132,28 +256,45 @@ class OrderController extends Controller
             'statuses' => $this->statusOptions($this->orderService->allowedTransitions($order)),
             'can_pay_remaining' => $canPayRemaining,
             'remaining_amount' => $canPayRemaining ? $this->remainingAmount($order) : null,
-        ]);
+            'address' => $this->addressData($order->address),
+            'courier_rates' => $courierRates,
+        ];
     }
 
-    public function transition(Request $request, Order $order): RedirectResponse
+    /**
+     * @return array<int, array{name: string, value: int, quantity: int, weight: int}>
+     */
+    private function shippingItems(Order $order): array
     {
-        $data = $request->validate([
-            'status' => ['required', Rule::enum(OrderStatus::class)],
-            'note' => ['nullable', 'string', 'max:500'],
-        ]);
-        $status = OrderStatus::from($data['status']);
+        return $order->items->map(fn (OrderItem $item): array => [
+            'name' => $item->campaign->title.' - '.$item->size->value,
+            'value' => (int) round((float) $item->unit_price),
+            'quantity' => $item->qty,
+            'weight' => (int) config('biteship.item_weight_grams', 250),
+        ])->values()->all();
+    }
 
-        if (! in_array($status->value, $this->orderService->allowedTransitions($order), true)) {
-            return back()->withErrors(['status' => 'Transisi tidak valid.']);
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function addressData(?Address $address): ?array
+    {
+        if ($address === null) {
+            return null;
         }
 
-        try {
-            $this->orderService->transition($order, $status, $data['note'] ?? null);
-        } catch (DomainException $exception) {
-            return back()->withErrors(['status' => $exception->getMessage()]);
-        }
-
-        return back()->with('status', 'Status order diperbarui.');
+        return [
+            'id' => $address->id,
+            'label' => $address->label,
+            'recipient_name' => $address->recipient_name,
+            'phone' => $address->phone,
+            'province' => $address->province,
+            'city' => $address->city,
+            'district' => $address->district,
+            'subdistrict' => $address->subdistrict,
+            'postal_code' => $address->postal_code,
+            'full_address' => $address->full_address,
+        ];
     }
 
     /**

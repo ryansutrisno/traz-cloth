@@ -78,6 +78,7 @@ class CampaignController extends Controller
         return Inertia::render('admin/campaigns/create', [
             'sizes' => array_map(fn (Size $size): string => $size->value, Size::cases()),
             'statuses' => array_map(fn (CampaignStatus $status): string => $status->value, CampaignStatus::cases()),
+            'cost_per_item' => null,
         ]);
     }
 
@@ -92,6 +93,7 @@ class CampaignController extends Controller
                 'description' => $data['description'] ?? null,
                 'image_url' => $data['image_url'] ?? null,
                 'base_price' => $data['base_price'],
+                'cost_per_item' => $data['cost_per_item'] ?? null,
                 'quota' => $data['quota'],
                 'sold_count' => 0,
                 'status' => $data['status'],
@@ -120,6 +122,7 @@ class CampaignController extends Controller
                 'description' => $campaign->description,
                 'image_url' => $campaign->image_url,
                 'base_price' => $campaign->base_price,
+                'cost_per_item' => $campaign->cost_per_item,
                 'quota' => $campaign->quota,
                 'sold_count' => $campaign->sold_count,
                 'status' => $campaign->status->value,
@@ -147,6 +150,7 @@ class CampaignController extends Controller
                 'description' => $data['description'] ?? null,
                 'image_url' => $data['image_url'] ?? null,
                 'base_price' => $data['base_price'],
+                'cost_per_item' => $data['cost_per_item'] ?? null,
                 'quota' => $data['quota'],
                 'status' => $data['status'],
                 'ready_stock_enabled' => $request->boolean('ready_stock_enabled', true),

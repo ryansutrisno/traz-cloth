@@ -1,12 +1,15 @@
-import { Form, Head, Link } from '@inertiajs/react';
+import { Form, Head, Link, router } from '@inertiajs/react';
 import { ShieldAlert } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
-import { store } from '@/routes/checkout';
+import { index as addressesIndex } from '@/routes/addresses';
+import { rates, store } from '@/routes/checkout';
 import { index as campaignsIndex } from '@/routes/campaigns';
 
 type CheckoutItem = {
@@ -20,12 +23,38 @@ type CheckoutItem = {
     subtotal: number;
 };
 
+type Address = {
+    id: number;
+    label: string;
+    recipient_name: string;
+    phone: string;
+    province: string;
+    city: string;
+    district: string;
+    subdistrict: string;
+    postal_code: string;
+    full_address: string;
+    is_default: boolean;
+};
+
+type CourierRate = {
+    courier_code: string;
+    courier_service_code: string;
+    service_type: string;
+    price: number;
+    duration: string;
+    shipment_duration_range: string;
+};
+
 type Props = {
     items: CheckoutItem[];
     subtotal: number;
     dp_amount: number;
     user: { name: string; email: string; phone: string | null };
     payment_modes: Array<'dp' | 'lunas'>;
+    addresses: Address[];
+    courier_rates: CourierRate[] | null;
+    selected_address_id: number | null;
 };
 
 const rupiah = new Intl.NumberFormat('id-ID', {
@@ -44,12 +73,49 @@ export default function CheckoutIndex({
     dp_amount,
     user,
     payment_modes,
+    addresses,
+    courier_rates,
+    selected_address_id,
 }: Props) {
     const [paymentMode, setPaymentMode] = useState<'dp' | 'lunas'>(
         payment_modes[0] ?? 'dp',
     );
+    const [selectedAddressId, setSelectedAddressId] = useState<number | null>(
+        selected_address_id,
+    );
+    const [selectedRate, setSelectedRate] = useState<CourierRate | null>(null);
+    const [rating, setRating] = useState(false);
 
-    const dueNow = paymentMode === 'dp' ? dp_amount : subtotal;
+    const handleGetRates = () => {
+        if (!selectedAddressId) {
+            toast.error('Pilih alamat dulu');
+
+            return;
+        }
+
+        setRating(true);
+        router.post(
+            rates.url(),
+            { address_id: selectedAddressId },
+            {
+                preserveScroll: true,
+                onFinish: () => setRating(false),
+                onError: (err) => {
+                    const msg = (err.courier as string | undefined) ?? 'Gagal';
+                    toast.error(msg);
+                },
+            },
+        );
+    };
+
+    const shippingCost = selectedRate?.price ?? 0;
+    const totalWithShipping = subtotal + shippingCost;
+    const payNow =
+        paymentMode === 'dp'
+            ? Math.round(totalWithShipping * 0.5)
+            : totalWithShipping;
+
+    const canSubmit = !!selectedAddressId && !!selectedRate && !!paymentMode;
 
     return (
         <>
@@ -76,8 +142,219 @@ export default function CheckoutIndex({
                                 name="payment_mode"
                                 value={paymentMode}
                             />
+                            <input
+                                type="hidden"
+                                name="address_id"
+                                value={selectedAddressId ?? ''}
+                            />
+                            <input
+                                type="hidden"
+                                name="courier_code"
+                                value={selectedRate?.courier_code ?? ''}
+                            />
+                            <input
+                                type="hidden"
+                                name="courier_service"
+                                value={selectedRate?.courier_service_code ?? ''}
+                            />
+                            <input
+                                type="hidden"
+                                name="shipping_cost"
+                                value={shippingCost}
+                            />
 
                             <div className="flex flex-col gap-6">
+                                {/* Address */}
+                                <Card className="gap-3 p-4">
+                                    <h2 className="font-medium">
+                                        Alamat Pengiriman
+                                    </h2>
+                                    {addresses.length === 0 ? (
+                                        <Alert>
+                                            <AlertTitle>
+                                                Belum ada alamat
+                                            </AlertTitle>
+                                            <AlertDescription>
+                                                <Link
+                                                    href={addressesIndex.url()}
+                                                    className="font-medium underline"
+                                                >
+                                                    Tambahkan alamat dulu
+                                                </Link>{' '}
+                                                untuk menghitung ongkir.
+                                            </AlertDescription>
+                                        </Alert>
+                                    ) : (
+                                        <div className="flex flex-col gap-2">
+                                            {addresses.map((address) => {
+                                                const isSelected =
+                                                    selectedAddressId ===
+                                                    address.id;
+
+                                                return (
+                                                    <label
+                                                        key={address.id}
+                                                        htmlFor={`address-${address.id}`}
+                                                        className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                                                            isSelected
+                                                                ? 'border-primary bg-primary/5'
+                                                                : 'hover:bg-muted/50'
+                                                        }`}
+                                                    >
+                                                        <input
+                                                            id={`address-${address.id}`}
+                                                            type="radio"
+                                                            name="address_radio"
+                                                            value={address.id}
+                                                            checked={isSelected}
+                                                            onChange={() => {
+                                                                setSelectedAddressId(
+                                                                    address.id,
+                                                                );
+                                                                setSelectedRate(
+                                                                    null,
+                                                                );
+                                                            }}
+                                                            data-test={`address-select-${address.id}`}
+                                                            className="mt-1 size-4 accent-primary"
+                                                        />
+                                                        <div className="flex flex-1 flex-col gap-0.5 text-sm">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-medium">
+                                                                    {
+                                                                        address.recipient_name
+                                                                    }
+                                                                </span>
+                                                                <Badge variant="secondary">
+                                                                    {
+                                                                        address.label
+                                                                    }
+                                                                </Badge>
+                                                                {address.is_default && (
+                                                                    <Badge>
+                                                                        Utama
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                            <span className="text-muted-foreground">
+                                                                {
+                                                                    address.full_address
+                                                                }
+                                                            </span>
+                                                            <span className="text-xs text-muted-foreground">
+                                                                {
+                                                                    address.province
+                                                                }
+                                                                , {address.city}
+                                                                ,{' '}
+                                                                {
+                                                                    address.district
+                                                                }{' '}
+                                                                {
+                                                                    address.postal_code
+                                                                }
+                                                            </span>
+                                                            <span className="text-xs text-muted-foreground">
+                                                                {address.phone}
+                                                            </span>
+                                                        </div>
+                                                    </label>
+                                                );
+                                            })}
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className="w-fit gap-1.5"
+                                                data-test="rates-button"
+                                                disabled={
+                                                    !selectedAddressId || rating
+                                                }
+                                                onClick={handleGetRates}
+                                            >
+                                                {rating && <Spinner />}
+                                                Hitung Ongkir
+                                            </Button>
+                                        </div>
+                                    )}
+                                    <InputError message={errors.address_id} />
+                                </Card>
+
+                                {/* Courier */}
+                                <Card className="gap-3 p-4">
+                                    <h2 className="font-medium">
+                                        Kurir & Ongkir
+                                    </h2>
+                                    {courier_rates === null ? (
+                                        <p className="text-sm text-muted-foreground">
+                                            Pilih alamat lalu hitung ongkir.
+                                        </p>
+                                    ) : courier_rates.length === 0 ? (
+                                        <p className="text-sm text-muted-foreground">
+                                            Tidak ada layanan kurir tersedia
+                                            untuk alamat ini.
+                                        </p>
+                                    ) : (
+                                        <div className="flex flex-col gap-2">
+                                            {courier_rates.map((rate) => {
+                                                const isSelected =
+                                                    selectedRate?.courier_code ===
+                                                        rate.courier_code &&
+                                                    selectedRate?.courier_service_code ===
+                                                        rate.courier_service_code;
+                                                const value = `${rate.courier_code}|${rate.courier_service_code}`;
+
+                                                return (
+                                                    <label
+                                                        key={value}
+                                                        htmlFor={`courier-${value}`}
+                                                        className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                                                            isSelected
+                                                                ? 'border-primary bg-primary/5'
+                                                                : 'hover:bg-muted/50'
+                                                        }`}
+                                                    >
+                                                        <input
+                                                            id={`courier-${value}`}
+                                                            type="radio"
+                                                            name="courier_radio"
+                                                            value={value}
+                                                            checked={isSelected}
+                                                            onChange={() =>
+                                                                setSelectedRate(
+                                                                    rate,
+                                                                )
+                                                            }
+                                                            data-test={`courier-select-${rate.courier_code}-${rate.courier_service_code}`}
+                                                            className="mt-1 size-4 accent-primary"
+                                                        />
+                                                        <div className="flex flex-1 flex-col gap-0.5 text-sm">
+                                                            <span className="font-medium">
+                                                                {rate.courier_code.toUpperCase()}{' '}
+                                                                {
+                                                                    rate.courier_service_code
+                                                                }
+                                                            </span>
+                                                            <span className="text-muted-foreground">
+                                                                {
+                                                                    rate.service_type
+                                                                }{' '}
+                                                                ·{' '}
+                                                                {rate.duration}
+                                                            </span>
+                                                        </div>
+                                                        <span className="font-medium tabular-nums">
+                                                            {formatPrice(
+                                                                rate.price,
+                                                            )}
+                                                        </span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                    <InputError message={errors.courier_code} />
+                                </Card>
+
                                 {/* Buyer info */}
                                 <Card className="gap-3 p-4">
                                     <h2 className="font-medium">
@@ -244,6 +521,24 @@ export default function CheckoutIndex({
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <span className="text-muted-foreground">
+                                                Ongkir
+                                            </span>
+                                            <span className="tabular-nums">
+                                                {selectedRate
+                                                    ? formatPrice(shippingCost)
+                                                    : '—'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-muted-foreground">
+                                                Total
+                                            </span>
+                                            <span className="tabular-nums">
+                                                {formatPrice(totalWithShipping)}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-muted-foreground">
                                                 Metode
                                             </span>
                                             <span className="font-medium">
@@ -259,7 +554,8 @@ export default function CheckoutIndex({
                                                 </span>
                                                 <span className="text-muted-foreground tabular-nums">
                                                     {formatPrice(
-                                                        subtotal - dp_amount,
+                                                        totalWithShipping -
+                                                            payNow,
                                                     )}
                                                 </span>
                                             </div>
@@ -271,14 +567,20 @@ export default function CheckoutIndex({
                                                 Bayar sekarang
                                             </span>
                                             <span className="text-lg font-semibold tabular-nums">
-                                                {formatPrice(dueNow)}
+                                                {formatPrice(payNow)}
                                             </span>
                                         </div>
+                                        {paymentMode === 'dp' && (
+                                            <p className="mt-1 text-xs text-muted-foreground">
+                                                DP 50% termasuk ongkir
+                                            </p>
+                                        )}
                                     </div>
                                     <Button
                                         type="submit"
                                         className="w-full gap-1.5"
                                         data-test="checkout-submit-button"
+                                        disabled={processing || !canSubmit}
                                     >
                                         {processing && <Spinner />}
                                         Bayar Sekarang

@@ -24,6 +24,7 @@ class CampaignFactory extends Factory
             'description' => fake()->paragraphs(3, true),
             'image_url' => fake()->imageUrl(),
             'base_price' => fake()->numberBetween(80000, 200000),
+            'cost_per_item' => fake()->optional()->numberBetween(40000, 80000),
             'quota' => fake()->numberBetween(50, 200),
             'sold_count' => 0,
             'status' => CampaignStatus::Active->value,

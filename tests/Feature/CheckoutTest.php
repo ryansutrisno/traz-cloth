@@ -7,6 +7,7 @@ use App\Enums\PaymentMode;
 use App\Enums\PaymentStatus;
 use App\Enums\PaymentType;
 use App\Enums\Size;
+use App\Models\Address;
 use App\Models\Campaign;
 use App\Models\CampaignSize;
 use App\Models\CartItem;
@@ -37,11 +38,13 @@ class CheckoutTest extends TestCase
     {
         $user = User::factory()->create();
         [$campaign, $cartItem] = $this->cartFor($user, 2);
+        $address = Address::factory()->for($user)->default()->create();
         $expectedUnitPrice = app(PricingService::class)->priceFor((float) $campaign->base_price, Size::S);
         $subtotal = $expectedUnitPrice * $cartItem->qty;
+        $total = $subtotal + 15000;
 
         $response = $this->actingAs($user)->post(route('checkout.store'), [
-            'payment_mode' => PaymentMode::Dp->value,
+            ...$this->checkoutPayload($address, PaymentMode::Dp),
         ]);
 
         $order = Order::query()->where('user_id', $user->id)->firstOrFail();
@@ -52,7 +55,8 @@ class CheckoutTest extends TestCase
         $this->assertSame(OrderStatus::MenungguPembayaran, $order->status);
         $this->assertSame(PaymentMode::Dp, $order->payment_mode);
         $this->assertSame((float) $subtotal, (float) $order->subtotal);
-        $this->assertSame((float) round($subtotal * 0.5), (float) $order->dp_amount);
+        $this->assertSame((float) $total, (float) $order->total_amount);
+        $this->assertSame((float) round($total * 0.5), (float) $order->dp_amount);
         $this->assertSame(1, $order->items()->count());
         $this->assertSame($cartItem->qty, $order->items()->first()->qty);
         $this->assertSame($expectedUnitPrice, (int) $order->items()->first()->unit_price);
@@ -67,9 +71,10 @@ class CheckoutTest extends TestCase
     {
         $user = User::factory()->create();
         $this->cartFor($user, 1);
+        $address = Address::factory()->for($user)->default()->create();
 
         $response = $this->actingAs($user)->post(route('checkout.store'), [
-            'payment_mode' => PaymentMode::Lunas->value,
+            ...$this->checkoutPayload($address, PaymentMode::Lunas),
         ]);
 
         $order = Order::query()->where('user_id', $user->id)->firstOrFail();
@@ -86,10 +91,11 @@ class CheckoutTest extends TestCase
     {
         $user = User::factory()->create();
         [$campaign] = $this->cartFor($user, 2, 1);
+        $address = Address::factory()->for($user)->default()->create();
 
         $this->actingAs($user)
             ->from(route('checkout.index'))
-            ->post(route('checkout.store'), ['payment_mode' => PaymentMode::Dp->value])
+            ->post(route('checkout.store'), $this->checkoutPayload($address, PaymentMode::Dp))
             ->assertSessionHasErrors('checkout');
 
         $this->assertDatabaseCount('orders', 0);
@@ -182,6 +188,53 @@ class CheckoutTest extends TestCase
             ->assertRedirect(route('cart.index'));
     }
 
+    public function test_checkout_requires_an_address(): void
+    {
+        $user = User::factory()->create();
+        $this->cartFor($user, 1);
+
+        $this->actingAs($user)
+            ->from(route('checkout.index'))
+            ->post(route('checkout.store'), [
+                'payment_mode' => PaymentMode::Dp->value,
+                'courier_code' => 'jne',
+                'courier_service' => 'reg',
+                'shipping_cost' => 15000,
+            ])
+            ->assertSessionHasErrors('address_id');
+    }
+
+    public function test_checkout_rates_returns_dev_rate(): void
+    {
+        $user = User::factory()->create();
+        $this->cartFor($user, 1);
+        $address = Address::factory()->for($user)->default()->create();
+
+        $this->actingAs($user)
+            ->post(route('checkout.rates'), ['address_id' => $address->id])
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('checkout/index', false)
+                ->has('courier_rates', 1)
+                ->where('courier_rates.0.courier_code', 'jne')
+                ->where('selected_address_id', $address->id),
+            );
+    }
+
+    public function test_checkout_rejects_invalid_courier_rate(): void
+    {
+        $user = User::factory()->create();
+        $this->cartFor($user, 1);
+        $address = Address::factory()->for($user)->default()->create();
+
+        $this->actingAs($user)
+            ->from(route('checkout.index'))
+            ->post(route('checkout.store'), $this->checkoutPayload($address, PaymentMode::Dp, 'sicepat', 'best'))
+            ->assertSessionHasErrors('courier');
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
     /**
      * @return array{0: Campaign, 1: CartItem}
      */
@@ -208,10 +261,26 @@ class CheckoutTest extends TestCase
 
     private function createOrder(User $user, PaymentMode $paymentMode): Order
     {
+        $address = Address::factory()->for($user)->default()->create();
+
         $this->actingAs($user)->post(route('checkout.store'), [
-            'payment_mode' => $paymentMode->value,
+            ...$this->checkoutPayload($address, $paymentMode),
         ])->assertRedirect();
 
         return Order::query()->where('user_id', $user->id)->latest('id')->firstOrFail();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function checkoutPayload(Address $address, PaymentMode $paymentMode, string $courierCode = 'jne', string $courierService = 'reg'): array
+    {
+        return [
+            'payment_mode' => $paymentMode->value,
+            'address_id' => $address->id,
+            'courier_code' => $courierCode,
+            'courier_service' => $courierService,
+            'shipping_cost' => 15000,
+        ];
     }
 }

@@ -70,6 +70,7 @@ class SendWhatsAppMessage implements ShouldQueue
         $orderNumber = $payload['order_number'] ?? (string) ($waMessage->order?->order_number ?? '');
 
         return match ($waMessage->template_key) {
+            'manual' => $payload['message'] ?? "Halo {$name}, ada pembaruan untuk pesanan {$orderNumber}. — Traz Cloth",
             'order_reminder_dp' => "Halo {$name}, pesanan {$orderNumber} kamu masih menunggu DP {$payload['dp_amount']} (minimal 50%). Batas bayar {$payload['due_at']}. DP hangus jika batal. — Traz Cloth",
             'order_reminder_payment' => "Halo {$name}, sisa pelunasan {$payload['remaining_amount']} untuk pesanan {$orderNumber} sudah bisa dibayar. Batas: {$payload['due_at']}. — Traz Cloth",
             'order_status_ready' => "Halo {$name}, pesanan {$orderNumber} kamu SUDAH SIAP KIRIM! Lakukan pelunasan untuk pengiriman. — Traz Cloth",

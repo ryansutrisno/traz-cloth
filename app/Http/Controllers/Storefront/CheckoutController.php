@@ -7,9 +7,12 @@ use App\Enums\PaymentMode;
 use App\Enums\PaymentStatus;
 use App\Enums\PaymentType;
 use App\Http\Controllers\Controller;
+use App\Models\Address;
 use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\User;
+use App\Services\BiteshipService;
 use App\Services\CartService;
 use App\Services\MidtransService;
 use App\Services\OrderService;
@@ -27,36 +30,94 @@ class CheckoutController extends Controller
         private CartService $cartService,
         private OrderService $orderService,
         private MidtransService $midtransService,
+        private BiteshipService $biteshipService,
     ) {}
 
     public function index(Request $request): Response
     {
         $user = $request->user();
         $items = $this->cartService->itemsFor($user);
-        $subtotal = $items->sum(fn (CartItem $item): int => (int) $item->getAttribute('subtotal'));
+        $subtotal = $this->subtotal($items);
 
-        return Inertia::render('checkout/index', [
-            'items' => $items,
-            'subtotal' => $subtotal,
-            'dp_amount' => (int) round($subtotal * 0.5),
-            'user' => [
-                'name' => $user->name,
-                'email' => $user->email,
-                'phone' => $user->phone,
-            ],
-            'payment_modes' => [PaymentMode::Dp->value, PaymentMode::Lunas->value],
+        return Inertia::render('checkout/index', $this->checkoutProps($user, $items, $subtotal));
+    }
+
+    public function rates(Request $request): Response|RedirectResponse
+    {
+        $data = $request->validate([
+            'address_id' => ['required', 'integer', 'exists:addresses,id'],
         ]);
+        $address = Address::query()->findOrFail($data['address_id']);
+        $this->ensureAddressOwnership($request, $address);
+        $user = $request->user();
+        $items = $this->cartService->itemsFor($user);
+
+        if ($items->isEmpty()) {
+            return back()->withErrors(['checkout' => 'Keranjang belanja kosong.']);
+        }
+
+        try {
+            $rates = $this->biteshipService->getRates(
+                $this->shippingItems($items),
+                $address->postal_code,
+            );
+        } catch (DomainException $exception) {
+            return back()->withErrors(['courier' => $exception->getMessage()]);
+        }
+
+        $subtotal = $this->subtotal($items);
+
+        return Inertia::render('checkout/index', $this->checkoutProps(
+            $user,
+            $items,
+            $subtotal,
+            $rates,
+            $address->id,
+        ));
     }
 
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
             'payment_mode' => ['required', Rule::in([PaymentMode::Dp->value, PaymentMode::Lunas->value])],
+            'address_id' => ['required', 'integer', 'exists:addresses,id'],
+            'courier_code' => ['required', 'string'],
+            'courier_service' => ['required', 'string'],
+            'shipping_cost' => ['required', 'numeric', 'min:0'],
         ]);
-        $paymentMode = PaymentMode::from($data['payment_mode']);
+        $address = Address::query()->findOrFail($data['address_id']);
+        $this->ensureAddressOwnership($request, $address);
+        $user = $request->user();
+        $items = $this->cartService->itemsFor($user);
+
+        if ($items->isEmpty()) {
+            return back()->withErrors(['checkout' => 'Keranjang belanja kosong.']);
+        }
 
         try {
-            $order = $this->orderService->createFromCart($request->user(), $paymentMode);
+            $rates = $this->biteshipService->getRates(
+                $this->shippingItems($items),
+                $address->postal_code,
+            );
+        } catch (DomainException $exception) {
+            return back()->withErrors(['courier' => $exception->getMessage()]);
+        }
+
+        $rate = collect($rates)->first(fn (array $rate): bool => $rate['courier_code'] === $data['courier_code']
+            && $rate['courier_service_code'] === $data['courier_service']);
+
+        if ($rate === null) {
+            return back()->withErrors(['courier' => 'Kurir tidak valid, hitung ulang ongkir.']);
+        }
+
+        $paymentMode = PaymentMode::from($data['payment_mode']);
+        try {
+            $order = $this->orderService->createFromCart($user, $paymentMode, [
+                'address_id' => $address->id,
+                'courier_code' => $data['courier_code'],
+                'courier_service' => $data['courier_service'],
+                'shipping_cost' => $rate['price'],
+            ]);
         } catch (DomainException $exception) {
             return back()->withErrors(['checkout' => 'Kuota tidak cukup atau kampanye tidak tersedia lagi.']);
         }
@@ -141,6 +202,68 @@ class CheckoutController extends Controller
         return redirect()
             ->route('cart.index')
             ->withErrors(['checkout' => 'Pembayaran dibatalkan.']);
+    }
+
+    /**
+     * @param  iterable<int, CartItem>  $items
+     * @return array<string, mixed>
+     */
+    private function checkoutProps(User $user, iterable $items, int $subtotal, ?array $rates = null, ?int $selectedAddressId = null): array
+    {
+        return [
+            'items' => $items,
+            'subtotal' => $subtotal,
+            'dp_amount' => (int) round($subtotal * 0.5),
+            'user' => [
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+            ],
+            'payment_modes' => [PaymentMode::Dp->value, PaymentMode::Lunas->value],
+            'addresses' => $user->addresses()
+                ->get(['id', 'label', 'recipient_name', 'phone', 'province', 'city', 'district', 'subdistrict', 'postal_code', 'full_address', 'is_default']),
+            'courier_rates' => $rates,
+            'selected_address_id' => $selectedAddressId,
+        ];
+    }
+
+    /**
+     * @param  iterable<int, CartItem>  $items
+     * @return array<int, array{name: string, value: int, quantity: int, weight: int}>
+     */
+    private function shippingItems(iterable $items): array
+    {
+        $shippingItems = [];
+
+        foreach ($items as $item) {
+            $shippingItems[] = [
+                'name' => $item->campaign->title.' - '.$item->size->value,
+                'value' => (int) $item->getAttribute('price'),
+                'quantity' => $item->qty,
+                'weight' => (int) config('biteship.item_weight_grams', 250),
+            ];
+        }
+
+        return $shippingItems;
+    }
+
+    /**
+     * @param  iterable<int, CartItem>  $items
+     */
+    private function subtotal(iterable $items): int
+    {
+        $subtotal = 0;
+
+        foreach ($items as $item) {
+            $subtotal += (int) $item->getAttribute('subtotal');
+        }
+
+        return $subtotal;
+    }
+
+    private function ensureAddressOwnership(Request $request, Address $address): void
+    {
+        abort_unless($address->user_id === $request->user()->id, 403);
     }
 
     private function ensureDevelopmentMode(): void

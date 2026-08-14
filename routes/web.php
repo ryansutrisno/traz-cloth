@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Storefront\AddressController;
 use App\Http\Controllers\Storefront\Auth\RegisteredUserController;
 use App\Http\Controllers\Storefront\CampaignController;
 use App\Http\Controllers\Storefront\CartController;
@@ -32,7 +33,13 @@ Route::middleware('auth')->group(function (): void {
     Route::patch('/cart/{cartItem}', [CartController::class, 'update'])->name('cart.update');
     Route::delete('/cart/{cartItem}', [CartController::class, 'destroy'])->name('cart.destroy');
 
+    Route::get('/alamat', [AddressController::class, 'index'])->name('addresses.index');
+    Route::post('/alamat', [AddressController::class, 'store'])->name('addresses.store');
+    Route::patch('/alamat/{address}', [AddressController::class, 'update'])->name('addresses.update');
+    Route::delete('/alamat/{address}', [AddressController::class, 'destroy'])->name('addresses.destroy');
+
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+    Route::post('/checkout/rates', [CheckoutController::class, 'rates'])->name('checkout.rates');
     Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:10,1')->name('checkout.store');
     Route::get('/checkout/dev/{order}', [CheckoutController::class, 'dev'])->name('checkout.dev');
     Route::post('/checkout/dev/{order}/pay', [CheckoutController::class, 'devPay'])->name('checkout.dev.pay');

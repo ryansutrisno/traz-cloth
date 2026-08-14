@@ -39,6 +39,9 @@ type Order = {
     total_amount: string;
     payment_due_at: string | null;
     created_at: string;
+    resi_number?: string | null;
+    courier_code?: string | null;
+    courier_service?: string | null;
     items: OrderItem[];
     payments: Payment[];
 };
@@ -301,6 +304,38 @@ export default function OrdersShow({
                                 </div>
                             )}
                         </Card>
+
+                        {/* Resi */}
+                        {order.resi_number && (
+                            <Card className="gap-3 p-4">
+                                <h2 className="font-medium">Resi Pengiriman</h2>
+                                <div className="flex flex-col gap-1 rounded-lg bg-muted/50 p-3 text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-muted-foreground">
+                                            Nomor resi:
+                                        </span>
+                                        <span
+                                            data-test="resi-number"
+                                            className="font-mono font-medium"
+                                        >
+                                            {order.resi_number}
+                                        </span>
+                                    </div>
+                                    {(order.courier_code ||
+                                        order.courier_service) && (
+                                        <p className="text-xs text-muted-foreground">
+                                            {order.courier_code?.toUpperCase()}{' '}
+                                            {order.courier_service}
+                                        </p>
+                                    )}
+                                    {order.courier_code && (
+                                        <p className="text-xs text-muted-foreground">
+                                            Lacak di {order.courier_code}
+                                        </p>
+                                    )}
+                                </div>
+                            </Card>
+                        )}
                     </div>
 
                     {/* Right summary */}

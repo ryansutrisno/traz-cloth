@@ -75,9 +75,9 @@ class OrderService
         throw new DomainException('Nomor order tidak dapat dibuat.');
     }
 
-    public function createFromCart(User $user, PaymentMode $paymentMode): Order
+    public function createFromCart(User $user, PaymentMode $paymentMode, array $shipping = []): Order
     {
-        return DB::transaction(function () use ($user, $paymentMode): Order {
+        return DB::transaction(function () use ($user, $paymentMode, $shipping): Order {
             $cartItems = CartItem::query()
                 ->where('user_id', $user->id)
                 ->with('campaign.sizes')
@@ -122,8 +122,10 @@ class OrderService
                 }
             }
 
+            $shippingCost = $shipping === [] ? 0 : (float) ($shipping['shipping_cost'] ?? 0);
+            $totalAmount = $subtotal + $shippingCost;
             $dpAmount = $paymentMode === PaymentMode::Dp
-                ? max(1, (int) round($subtotal * 0.5))
+                ? max(1, (int) round($totalAmount * 0.5))
                 : null;
             $order = Order::query()->create([
                 'user_id' => $user->id,
@@ -131,9 +133,13 @@ class OrderService
                 'status' => OrderStatus::MenungguPembayaran,
                 'payment_mode' => $paymentMode,
                 'subtotal' => $subtotal,
-                'total_amount' => $subtotal,
+                'total_amount' => $totalAmount,
                 'dp_amount' => $dpAmount,
                 'payment_due_at' => null,
+                'address_id' => $shipping['address_id'] ?? null,
+                'shipping_cost' => $shipping === [] ? null : $shippingCost,
+                'courier_code' => $shipping['courier_code'] ?? null,
+                'courier_service' => $shipping['courier_service'] ?? null,
             ]);
 
             foreach ($lineItems as $lineItem) {

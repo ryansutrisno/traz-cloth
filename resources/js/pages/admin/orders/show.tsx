@@ -14,7 +14,13 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { index as adminOrdersIndex, transition } from '@/routes/admin/orders';
+import { Spinner } from '@/components/ui/spinner';
+import {
+    index as adminOrdersIndex,
+    bookCourier,
+    courierRates,
+    transition,
+} from '@/routes/admin/orders';
 
 type OrderItem = {
     id: number;
@@ -41,6 +47,28 @@ type History = {
     created_at: string;
 };
 
+type Address = {
+    id: number;
+    label: string;
+    recipient_name: string;
+    phone: string;
+    province: string;
+    city: string;
+    district: string;
+    subdistrict: string;
+    postal_code: string;
+    full_address: string;
+};
+
+type CourierRate = {
+    courier_code: string;
+    courier_service_code: string;
+    service_type: string;
+    price: number;
+    duration: string;
+    shipment_duration_range: string;
+};
+
 type Order = {
     id: number;
     order_number: string;
@@ -52,6 +80,9 @@ type Order = {
     payment_due_at: string | null;
     buyer_notes: string | null;
     created_at: string;
+    resi_number?: string | null;
+    courier_code?: string | null;
+    courier_service?: string | null;
     user: { name: string; email: string; phone: string };
     items: OrderItem[];
     payments: Payment[];
@@ -65,6 +96,8 @@ type Props = {
     statuses: StatusOption[];
     can_pay_remaining: boolean;
     remaining_amount: string | null;
+    address: Address | null;
+    courier_rates: CourierRate[] | null;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -155,10 +188,15 @@ export default function AdminOrdersShow({
     statuses,
     can_pay_remaining,
     remaining_amount,
+    address,
+    courier_rates,
 }: Props) {
     const [nextStatus, setNextStatus] = useState('');
     const [note, setNote] = useState('');
     const [saving, setSaving] = useState(false);
+    const [selectedRate, setSelectedRate] = useState<CourierRate | null>(null);
+    const [rating, setRating] = useState(false);
+    const [booking, setBooking] = useState(false);
 
     const handleTransition = () => {
         if (!nextStatus) {
@@ -184,6 +222,55 @@ export default function AdminOrdersShow({
                     const msg =
                         (err.status as string | undefined) ??
                         'Gagal memperbarui status';
+                    toast.error(msg);
+                },
+            },
+        );
+    };
+
+    const handleGetCourierRates = () => {
+        setRating(true);
+        router.post(
+            courierRates.url({ order: order.id }),
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setRating(false),
+                onError: (err) => {
+                    const msg = (err.courier as string | undefined) ?? 'Gagal';
+                    toast.error(msg);
+                },
+            },
+        );
+    };
+
+    const handleBookCourier = () => {
+        if (!selectedRate) {
+            toast.error('Pilih kurir dulu');
+
+            return;
+        }
+
+        setBooking(true);
+        router.post(
+            bookCourier.url({ order: order.id }),
+            {
+                courier_code: selectedRate.courier_code,
+                courier_service: selectedRate.courier_service_code,
+                shipping_cost: selectedRate.price,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setBooking(false);
+                    toast.success('Kurir di-book');
+                },
+                onError: (err) => {
+                    setBooking(false);
+                    const msg =
+                        (err.courier as string | undefined) ??
+                        (err.status as string | undefined) ??
+                        'Gagal';
                     toast.error(msg);
                 },
             },
@@ -441,6 +528,168 @@ export default function AdminOrdersShow({
                                 ))}
                             </div>
                         </Card>
+
+                        {/* Shipping */}
+                        {address && (
+                            <Card className="gap-3 p-4">
+                                <h2 className="font-medium">Pengiriman</h2>
+                                <div
+                                    data-test="order-address"
+                                    className="flex flex-col gap-1 text-sm"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant="secondary">
+                                            {address.label}
+                                        </Badge>
+                                        <span className="font-medium">
+                                            {address.recipient_name}
+                                        </span>
+                                    </div>
+                                    <p className="text-muted-foreground">
+                                        {address.full_address}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {address.province}, {address.city},{' '}
+                                        {address.district},{' '}
+                                        {address.subdistrict}{' '}
+                                        {address.postal_code}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {address.phone}
+                                    </p>
+                                </div>
+
+                                {order.resi_number && (
+                                    <div className="flex flex-col gap-1 rounded-lg bg-muted/50 p-3 text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-muted-foreground">
+                                                Resi:
+                                            </span>
+                                            <span
+                                                data-test="resi-number"
+                                                className="font-mono font-medium"
+                                            >
+                                                {order.resi_number}
+                                            </span>
+                                        </div>
+                                        {(order.courier_code ||
+                                            order.courier_service) && (
+                                            <p className="text-xs text-muted-foreground">
+                                                {order.courier_code?.toUpperCase()}{' '}
+                                                {order.courier_service}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {order.status === 'lunas' &&
+                                    !order.resi_number && (
+                                        <div className="flex flex-col gap-2">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className="w-fit gap-1.5"
+                                                data-test="courier-rates-button"
+                                                disabled={rating}
+                                                onClick={handleGetCourierRates}
+                                            >
+                                                {rating && <Spinner />}
+                                                Hitung Ongkir
+                                            </Button>
+
+                                            {courier_rates &&
+                                                courier_rates.length > 0 && (
+                                                    <div className="flex flex-col gap-2">
+                                                        {courier_rates.map(
+                                                            (rate) => {
+                                                                const isSelected =
+                                                                    selectedRate?.courier_code ===
+                                                                        rate.courier_code &&
+                                                                    selectedRate?.courier_service_code ===
+                                                                        rate.courier_service_code;
+                                                                const value = `${rate.courier_code}|${rate.courier_service_code}`;
+
+                                                                return (
+                                                                    <label
+                                                                        key={
+                                                                            value
+                                                                        }
+                                                                        htmlFor={`admin-courier-${value}`}
+                                                                        className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                                                                            isSelected
+                                                                                ? 'border-primary bg-primary/5'
+                                                                                : 'hover:bg-muted/50'
+                                                                        }`}
+                                                                    >
+                                                                        <input
+                                                                            id={`admin-courier-${value}`}
+                                                                            type="radio"
+                                                                            name="admin_courier_radio"
+                                                                            value={
+                                                                                value
+                                                                            }
+                                                                            checked={
+                                                                                isSelected
+                                                                            }
+                                                                            onChange={() =>
+                                                                                setSelectedRate(
+                                                                                    rate,
+                                                                                )
+                                                                            }
+                                                                            data-test={`admin-courier-select-${rate.courier_code}-${rate.courier_service_code}`}
+                                                                            className="mt-1 size-4 accent-primary"
+                                                                        />
+                                                                        <div className="flex flex-1 flex-col gap-0.5 text-sm">
+                                                                            <span className="font-medium">
+                                                                                {rate.courier_code.toUpperCase()}{' '}
+                                                                                {
+                                                                                    rate.courier_service_code
+                                                                                }
+                                                                            </span>
+                                                                            <span className="text-muted-foreground">
+                                                                                {
+                                                                                    rate.service_type
+                                                                                }{' '}
+                                                                                ·{' '}
+                                                                                {
+                                                                                    rate.duration
+                                                                                }
+                                                                            </span>
+                                                                        </div>
+                                                                        <span className="font-medium tabular-nums">
+                                                                            {formatPrice(
+                                                                                String(
+                                                                                    rate.price,
+                                                                                ),
+                                                                            )}
+                                                                        </span>
+                                                                    </label>
+                                                                );
+                                                            },
+                                                        )}
+                                                        <Button
+                                                            type="button"
+                                                            className="w-fit gap-1.5"
+                                                            data-test="book-courier-button"
+                                                            disabled={
+                                                                !selectedRate ||
+                                                                booking
+                                                            }
+                                                            onClick={
+                                                                handleBookCourier
+                                                            }
+                                                        >
+                                                            {booking && (
+                                                                <Spinner />
+                                                            )}
+                                                            Booking Kurir
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                        </div>
+                                    )}
+                            </Card>
+                        )}
                     </div>
 
                     {/* Right sticky */}

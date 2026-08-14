@@ -23,7 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(fn (Request $request) => $request->is('admin/*') ? route('admin.login') : route('login'));
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
-        $middleware->validateCsrfTokens(except: ['webhook/midtrans']);
+        $middleware->validateCsrfTokens(except: ['webhook/midtrans', 'webhook/biteship']);
 
         $middleware->web(append: [
             HandleAppearance::class,

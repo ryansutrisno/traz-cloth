@@ -16,12 +16,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $description
  * @property string|null $image_url
  * @property string $base_price
+ * @property string|null $cost_per_item
  * @property int $quota
  * @property int $sold_count
  * @property CampaignStatus $status
  * @property bool $ready_stock_enabled
  */
-#[Fillable(['slug', 'title', 'description', 'image_url', 'base_price', 'quota', 'sold_count', 'status', 'ready_stock_enabled'])]
+#[Fillable(['slug', 'title', 'description', 'image_url', 'base_price', 'cost_per_item', 'quota', 'sold_count', 'status', 'ready_stock_enabled'])]
 class Campaign extends Model
 {
     /** @use HasFactory<CampaignFactory> */
@@ -36,6 +37,7 @@ class Campaign extends Model
     {
         return [
             'base_price' => 'decimal:2',
+            'cost_per_item' => 'decimal:2',
             'status' => CampaignStatus::class,
             'ready_stock_enabled' => 'boolean',
         ];

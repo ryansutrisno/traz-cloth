@@ -26,6 +26,7 @@ class CampaignStoreRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'image_url' => ['nullable', 'url', 'max:2048'],
             'base_price' => ['required', 'numeric', 'min:0', 'max:999999999'],
+            'cost_per_item' => ['nullable', 'numeric', 'min:0'],
             'quota' => ['required', 'integer', 'min:1'],
             'status' => ['required', Rule::enum(CampaignStatus::class)],
             'ready_stock_enabled' => ['sometimes', 'boolean'],

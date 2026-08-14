@@ -23,8 +23,16 @@ use Illuminate\Support\Carbon;
  * @property string|null $dp_amount
  * @property Carbon|null $payment_due_at
  * @property string|null $buyer_notes
+ * @property int|null $address_id
+ * @property string|null $shipping_cost
+ * @property string|null $courier_code
+ * @property string|null $courier_service
+ * @property string|null $resi_number
+ * @property string|null $biteship_order_id
+ * @property Carbon|null $shipped_at
+ * @property Carbon|null $delivered_at
  */
-#[Fillable(['user_id', 'order_number', 'status', 'payment_mode', 'subtotal', 'total_amount', 'dp_amount', 'payment_due_at', 'buyer_notes'])]
+#[Fillable(['user_id', 'order_number', 'status', 'payment_mode', 'subtotal', 'total_amount', 'dp_amount', 'payment_due_at', 'buyer_notes', 'address_id', 'shipping_cost', 'courier_code', 'courier_service', 'resi_number', 'biteship_order_id', 'shipped_at', 'delivered_at'])]
 class Order extends Model
 {
     /** @use HasFactory<OrderFactory> */
@@ -36,6 +44,14 @@ class Order extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the shipping address for the order.
+     */
+    public function address(): BelongsTo
+    {
+        return $this->belongsTo(Address::class);
     }
 
     /**
@@ -76,6 +92,9 @@ class Order extends Model
             'total_amount' => 'decimal:2',
             'dp_amount' => 'decimal:2',
             'payment_due_at' => 'datetime',
+            'shipping_cost' => 'decimal:2',
+            'shipped_at' => 'datetime',
+            'delivered_at' => 'datetime',
         ];
     }
 }

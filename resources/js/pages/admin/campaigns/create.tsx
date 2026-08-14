@@ -86,6 +86,12 @@ export default function AdminCampaignsCreate({ sizes, statuses }: Props) {
                             }
                         }
 
+                        data.cost_per_item =
+                            data.cost_per_item === '' ||
+                            data.cost_per_item === undefined
+                                ? null
+                                : data.cost_per_item;
+
                         return data;
                     }}
                     className="flex flex-col gap-6"
@@ -161,7 +167,7 @@ export default function AdminCampaignsCreate({ sizes, statuses }: Props) {
                                         />
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
                                         <div className="grid gap-2">
                                             <Label htmlFor="base_price">
                                                 Harga Dasar
@@ -205,6 +211,33 @@ export default function AdminCampaignsCreate({ sizes, statuses }: Props) {
                                             </p>
                                             <InputError
                                                 message={errors.quota}
+                                            />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="cost_per_item">
+                                                Biaya produksi per pcs
+                                                (estimasi)
+                                            </Label>
+                                            <div className="relative">
+                                                <span className="absolute top-1/2 left-3 -translate-y-1/2 text-sm text-muted-foreground">
+                                                    Rp
+                                                </span>
+                                                <Input
+                                                    id="cost_per_item"
+                                                    name="cost_per_item"
+                                                    type="number"
+                                                    min={0}
+                                                    step={1000}
+                                                    className="pl-9"
+                                                    placeholder="50000"
+                                                />
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                Untuk hitung margin di laporan.
+                                            </p>
+                                            <InputError
+                                                message={errors.cost_per_item}
                                             />
                                         </div>
                                     </div>
