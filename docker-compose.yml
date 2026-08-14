@@ -1,0 +1,119 @@
+# Production-oriented local deployment:
+#   docker compose up -d --build
+services:
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        env_file:
+            - .env
+        environment:
+            DB_CONNECTION: pgsql
+            DB_HOST: db
+            DB_PORT: 5432
+            DB_DATABASE: ${DB_DATABASE:-traz_cloth}
+            DB_USERNAME: ${DB_USERNAME:-traz_cloth}
+            DB_PASSWORD: ${DB_PASSWORD:-traz_cloth_change_me}
+        volumes:
+            - ./storage:/var/www/html/storage
+            - app_public:/var/www/html/public
+        depends_on:
+            db:
+                condition: service_healthy
+        restart: unless-stopped
+        networks:
+            - appnet
+
+    nginx:
+        image: nginx:alpine
+        ports:
+            - "80:80"
+        volumes:
+            - app_public:/var/www/html/public:ro
+            - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+        depends_on:
+            - app
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD-SHELL", "wget -qO- http://localhost/health || exit 1"]
+            interval: 30s
+            timeout: 5s
+            retries: 3
+        networks:
+            - appnet
+
+    worker:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+        env_file:
+            - .env
+        environment:
+            DB_CONNECTION: pgsql
+            DB_HOST: db
+            DB_PORT: 5432
+            DB_DATABASE: ${DB_DATABASE:-traz_cloth}
+            DB_USERNAME: ${DB_USERNAME:-traz_cloth}
+            DB_PASSWORD: ${DB_PASSWORD:-traz_cloth_change_me}
+        volumes:
+            - ./storage:/var/www/html/storage
+        depends_on:
+            app:
+                condition: service_started
+            db:
+                condition: service_healthy
+        restart: unless-stopped
+        networks:
+            - appnet
+
+    scheduler:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        command: php artisan schedule:work
+        env_file:
+            - .env
+        environment:
+            DB_CONNECTION: pgsql
+            DB_HOST: db
+            DB_PORT: 5432
+            DB_DATABASE: ${DB_DATABASE:-traz_cloth}
+            DB_USERNAME: ${DB_USERNAME:-traz_cloth}
+            DB_PASSWORD: ${DB_PASSWORD:-traz_cloth_change_me}
+        volumes:
+            - ./storage:/var/www/html/storage
+        depends_on:
+            db:
+                condition: service_healthy
+        restart: unless-stopped
+        networks:
+            - appnet
+
+    db:
+        image: postgres:17-alpine
+        environment:
+            POSTGRES_DB: ${DB_DATABASE:-traz_cloth}
+            POSTGRES_USER: ${DB_USERNAME:-traz_cloth}
+            POSTGRES_PASSWORD: ${DB_PASSWORD:-traz_cloth_change_me}
+        volumes:
+            - pgdata:/var/lib/postgresql/data
+        # Uncomment for local database tooling; keep the database internal in production.
+        # ports:
+        #     - "5432:5432"
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - appnet
+
+volumes:
+    app_public:
+    pgdata:
+
+networks:
+    appnet:
+        driver: bridge
