@@ -8,6 +8,9 @@ return [
     'base_url' => env('MIDTRANS_IS_PRODUCTION', false)
         ? 'https://app.midtrans.com/snap/v1/transactions'
         : 'https://app.sandbox.midtrans.com/snap/v1/transactions',
+    'api_base_url' => env('MIDTRANS_IS_PRODUCTION', false)
+        ? 'https://api.midtrans.com'
+        : 'https://api.sandbox.midtrans.com',
     'expiry_unit' => 'hours',
     'expiry_duration' => 24,
 ];

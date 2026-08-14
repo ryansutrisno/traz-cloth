@@ -22,6 +22,41 @@ use Illuminate\Support\Str;
 
 class OrderService
 {
+    /**
+     * Allowed forward transitions for operational order processing.
+     *
+     * @var array<string, array<int, string>>
+     */
+    protected const array TRANSITIONS = [
+        'menunggu_pembayaran' => [
+            'dp_dibayar',
+            'dibatalkan_buyer',
+            'dibatalkan_sistem',
+        ],
+        'dp_dibayar' => [
+            'produksi',
+            'dibatalkan_buyer',
+            'dibatalkan_sistem',
+        ],
+        'produksi' => [
+            'siap_kirim',
+            'dibatalkan_buyer',
+            'dibatalkan_sistem',
+        ],
+        'siap_kirim' => [
+            'lunas',
+            'dibatalkan_buyer',
+            'dibatalkan_sistem',
+        ],
+        'lunas' => [
+            'dikirim',
+        ],
+        'dikirim' => [
+            'delivered',
+        ],
+        'delivered' => [],
+    ];
+
     public function __construct(
         private PricingService $pricingService,
         private QuotaService $quotaService,
@@ -223,6 +258,57 @@ class OrderService
 
             return $this->recordStatusHistory($order, $status, $note);
         });
+    }
+
+    public function transition(Order $order, OrderStatus $status, ?string $note = null): void
+    {
+        DB::transaction(function () use ($order, $status, $note): void {
+            $lockedOrder = Order::query()->lockForUpdate()->findOrFail($order->id);
+            $from = $lockedOrder->status->value;
+            $allowed = self::TRANSITIONS[$from] ?? [];
+
+            if (! in_array($status->value, $allowed, true)) {
+                throw new DomainException("Transisi status tidak valid: {$from} ke {$status->value}");
+            }
+
+            OrderStatusHistory::query()->create([
+                'order_id' => $lockedOrder->id,
+                'status' => $status,
+                'note' => $note,
+            ]);
+            $lockedOrder->status = $status;
+            $lockedOrder->save();
+        });
+    }
+
+    public function markProduksi(Order $order, ?string $note = null): void
+    {
+        $this->transition($order, OrderStatus::Produksi, $note);
+    }
+
+    public function markSiapKirim(Order $order, ?string $note = null): void
+    {
+        $this->transition($order, OrderStatus::SiapKirim, $note);
+    }
+
+    public function markDikirim(Order $order, ?string $note = null): void
+    {
+        $this->transition($order, OrderStatus::Dikirim, $note);
+    }
+
+    public function markDelivered(Order $order, ?string $note = null): void
+    {
+        $this->transition($order, OrderStatus::Delivered, $note);
+    }
+
+    /**
+     * Get the valid next statuses for the order's current status.
+     *
+     * @return array<int, string>
+     */
+    public function allowedTransitions(Order $order): array
+    {
+        return self::TRANSITIONS[$order->status->value] ?? [];
     }
 
     private function assertPaymentBelongsToOrder(Order $order, Payment $payment): void

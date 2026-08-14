@@ -4,6 +4,7 @@ use App\Http\Controllers\Storefront\Auth\RegisteredUserController;
 use App\Http\Controllers\Storefront\CampaignController;
 use App\Http\Controllers\Storefront\CartController;
 use App\Http\Controllers\Storefront\CheckoutController;
+use App\Http\Controllers\Storefront\OrderController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -37,8 +38,18 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/checkout/dev/{order}/pay', [CheckoutController::class, 'devPay'])->name('checkout.dev.pay');
     Route::get('/checkout/success/{order}', [CheckoutController::class, 'success'])->name('checkout.success');
     Route::get('/checkout/canceled', [CheckoutController::class, 'canceled'])->name('checkout.canceled');
+
+    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::post('/orders/{order}/pay-remaining', [OrderController::class, 'payRemaining'])
+        ->middleware('throttle:10,1')
+        ->name('orders.pay-remaining');
 });
 
 if (file_exists(__DIR__.'/admin.php')) {
     require __DIR__.'/admin.php';
+}
+
+if (file_exists(__DIR__.'/webhook.php')) {
+    require __DIR__.'/webhook.php';
 }

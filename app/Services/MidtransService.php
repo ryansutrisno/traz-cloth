@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\PaymentType;
 use App\Models\Order;
 use App\Models\OrderItem;
+use DomainException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
@@ -13,6 +14,34 @@ use Throwable;
 
 class MidtransService
 {
+    /**
+     * Fetch the authoritative Midtrans transaction status.
+     *
+     * @return array<string, mixed>
+     */
+    public function getStatus(string $orderId): array
+    {
+        $serverKey = trim((string) config('midtrans.server_key', ''));
+
+        if ($serverKey === '') {
+            throw new DomainException('Midtrans server key belum dikonfigurasi');
+        }
+
+        $response = Http::withHeaders([
+            'Authorization' => 'Basic '.base64_encode($serverKey.':'),
+            'Accept' => 'application/json',
+        ])->timeout(10)->get($this->apiBaseUrl().'/v2/'.$orderId.'/status');
+
+        $response->throw();
+        $payload = $response->json();
+
+        if (! is_array($payload)) {
+            throw new RuntimeException('Respons status Midtrans tidak valid.');
+        }
+
+        return $payload;
+    }
+
     /**
      * Create a Midtrans Snap token for the selected payment transaction.
      *
@@ -148,5 +177,10 @@ class MidtransService
         }
 
         return '/checkout/dev/'.$order->order_number;
+    }
+
+    private function apiBaseUrl(): string
+    {
+        return rtrim((string) config('midtrans.api_base_url'), '/');
     }
 }
