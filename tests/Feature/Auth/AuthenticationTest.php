@@ -32,6 +32,28 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect(route('dashboard', absolute: false));
     }
 
+    public function test_login_redirect_parameter_can_return_buyer_to_checkout(): void
+    {
+        $user = User::factory()->create();
+
+        $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'password',
+            'redirect' => '/checkout',
+        ])->assertRedirect(route('checkout.index'));
+    }
+
+    public function test_external_login_redirect_is_rejected(): void
+    {
+        $user = User::factory()->create();
+
+        $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'password',
+            'redirect' => '//evil.example.com',
+        ])->assertRedirect(route('dashboard'));
+    }
+
     public function test_users_with_two_factor_enabled_are_redirected_to_two_factor_challenge()
     {
         $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());

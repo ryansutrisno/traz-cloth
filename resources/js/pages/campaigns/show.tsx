@@ -109,7 +109,7 @@ export default function CampaignsShow({
     return (
         <>
             <Head title={campaign.title} />
-            <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+            <div className="flex flex-1 flex-col gap-6">
                 {/* Breadcrumb */}
                 <div>
                     <Button variant="ghost" size="sm" asChild>

@@ -120,9 +120,9 @@ export default function CheckoutIndex({
     return (
         <>
             <Head title="Checkout" />
-            <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+            <div className="flex flex-1 flex-col gap-4 md:gap-6">
                 <div className="flex flex-col gap-1">
-                    <h1 className="text-2xl font-semibold tracking-tight">
+                    <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
                         Checkout
                     </h1>
                     <p className="text-sm text-muted-foreground">
@@ -133,7 +133,7 @@ export default function CheckoutIndex({
                 <Form
                     {...store.form()}
                     disableWhileProcessing
-                    className="grid gap-6 lg:grid-cols-[1fr_360px]"
+                    className="flex flex-col gap-4 md:gap-6 lg:grid lg:grid-cols-[1fr_360px]"
                 >
                     {({ processing, errors }) => (
                         <>

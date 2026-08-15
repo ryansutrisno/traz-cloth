@@ -1,13 +1,27 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import InputError from '@/components/input-error';
+import PasswordInput from '@/components/password-input';
+import TextLink from '@/components/text-link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
 import { destroy, update } from '@/routes/cart';
 import { index as checkoutIndex } from '@/routes/checkout';
 import { index as campaignsIndex, show } from '@/routes/campaigns';
+import { register } from '@/routes';
+import { store as loginStore } from '@/routes/login';
 
 type CartItem = {
     id: number;
@@ -38,7 +52,11 @@ function formatPrice(value: number): string {
 }
 
 export default function CartIndex({ items, total, empty }: Props) {
+    const { auth } = usePage().props;
+    const isGuest = !auth.user;
+
     const [pendingId, setPendingId] = useState<number | null>(null);
+    const [loginOpen, setLoginOpen] = useState(false);
 
     const changeQty = (item: CartItem, nextQty: number) => {
         if (nextQty < 1) {
@@ -47,7 +65,7 @@ export default function CartIndex({ items, total, empty }: Props) {
 
         setPendingId(item.id);
         router.patch(
-            update.url({ id: item.id }),
+            update.url({ cartItem: item.id }),
             { qty: nextQty },
             {
                 preserveScroll: true,
@@ -62,7 +80,17 @@ export default function CartIndex({ items, total, empty }: Props) {
             return;
         }
 
-        router.delete(destroy.url({ id: item.id }), { preserveScroll: true });
+        router.delete(destroy.url({ cartItem: item.id }), { preserveScroll: true });
+    };
+
+    const handleCheckout = () => {
+        if (isGuest) {
+            setLoginOpen(true);
+
+            return;
+        }
+
+        router.visit(checkoutIndex.url());
     };
 
     if (empty) {
@@ -245,13 +273,12 @@ export default function CartIndex({ items, total, empty }: Props) {
                                 </div>
                             </div>
                             <Button
-                                asChild
+                                type="button"
                                 className="w-full"
                                 data-test="checkout-button"
+                                onClick={handleCheckout}
                             >
-                                <Link href={checkoutIndex.url()}>
-                                    Lanjut ke Checkout
-                                </Link>
+                                Lanjut ke Checkout
                             </Button>
                             <Button
                                 asChild
@@ -266,6 +293,88 @@ export default function CartIndex({ items, total, empty }: Props) {
                     </div>
                 </div>
             </div>
+
+            {/* Login Modal (guest only) */}
+            <Dialog open={loginOpen} onOpenChange={setLoginOpen}>
+                <DialogContent data-test="login-modal" className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Masuk untuk checkout</DialogTitle>
+                        <DialogDescription>
+                            Keranjangmu sudah tersimpan. Masuk untuk melanjutkan
+                            ke pembayaran.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <Form
+                        {...loginStore.form()}
+                        resetOnSuccess={['password']}
+                        disableWhileProcessing
+                        onSuccess={() => {
+                            setLoginOpen(false);
+                            router.visit(checkoutIndex.url());
+                        }}
+                        className="flex flex-col gap-4"
+                    >
+                        {({ processing, errors }) => (
+                            <>
+                                {/* Hidden redirect — backend arahkan ke checkout setelah login */}
+                                <input
+                                    type="hidden"
+                                    name="redirect"
+                                    value={checkoutIndex.url()}
+                                />
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor="modal-email">Email</Label>
+                                    <Input
+                                        id="modal-email"
+                                        type="email"
+                                        name="email"
+                                        required
+                                        autoFocus
+                                        autoComplete="email"
+                                        placeholder="email@example.com"
+                                    />
+                                    <InputError message={errors.email} />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor="modal-password">
+                                        Kata sandi
+                                    </Label>
+                                    <PasswordInput
+                                        id="modal-password"
+                                        name="password"
+                                        required
+                                        autoComplete="current-password"
+                                        placeholder="Kata sandi"
+                                    />
+                                    <InputError message={errors.password} />
+                                </div>
+
+                                <Button
+                                    type="submit"
+                                    className="mt-2 w-full"
+                                    data-test="modal-login-button"
+                                >
+                                    {processing && <Spinner />}
+                                    Masuk
+                                </Button>
+                            </>
+                        )}
+                    </Form>
+
+                    <div className="text-center text-sm text-muted-foreground">
+                        Belum punya akun?{' '}
+                        <TextLink
+                            href={register()}
+                            data-test="modal-register-link"
+                        >
+                            Daftar
+                        </TextLink>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

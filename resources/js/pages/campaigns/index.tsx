@@ -3,7 +3,6 @@ import { Search } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { index, show } from '@/routes/campaigns';
 
@@ -84,20 +83,20 @@ export default function CampaignsIndex({
     return (
         <>
             <Head title="Koleksi Kampanye" />
-            <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+            <div className="flex flex-col gap-4 md:gap-6">
                 {/* Hero */}
-                <div className="flex flex-col gap-2">
-                    <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+                <div className="flex flex-col gap-1 pt-2">
+                    <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
                         Koleksi Terbatas
                     </h1>
-                    <p className="text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                         Desain kaos pre-order edisi terbatas. Amankan slot kamu
                         sebelum habis.
                     </p>
                 </div>
 
                 {/* Search */}
-                <div className="relative w-full max-w-md">
+                <div className="relative w-full">
                     <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                         data-test="search-campaigns-input"
@@ -105,15 +104,15 @@ export default function CampaignsIndex({
                         value={q}
                         onChange={(e) => handleSearch(e.target.value)}
                         placeholder="Cari desain..."
-                        className="pl-9"
+                        className="h-10 pl-9"
                         aria-label="Cari desain"
                     />
                 </div>
 
                 {/* Grid */}
                 {campaigns.data.length === 0 ? (
-                    <div className="flex flex-1 flex-col items-center justify-center gap-2 py-20 text-center">
-                        <p className="text-lg font-medium">
+                    <div className="flex flex-1 flex-col items-center justify-center gap-2 py-16 text-center">
+                        <p className="text-base font-medium">
                             Belum ada kampanye aktif
                         </p>
                         <p className="text-sm text-muted-foreground">
@@ -122,7 +121,7 @@ export default function CampaignsIndex({
                         </p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
                         {campaigns.data.map((campaign) => (
                             <Link
                                 key={campaign.id}
@@ -130,19 +129,19 @@ export default function CampaignsIndex({
                                 data-test="campaign-card"
                                 className="group block focus-visible:outline-none"
                             >
-                                <Card className="gap-0 overflow-hidden p-0 py-0 transition-shadow group-hover:shadow-md group-focus-visible:ring-2 group-focus-visible:ring-ring">
-                                    {/* Image */}
-                                    <div className="relative aspect-[4/5] overflow-hidden bg-muted">
+                                <div className="overflow-hidden rounded-lg border bg-card transition-shadow group-hover:shadow-md group-focus-visible:ring-2 group-focus-visible:ring-ring">
+                                    {/* Image — aspect-square for Shopify-like grid */}
+                                    <div className="relative aspect-square overflow-hidden bg-muted">
                                         {campaign.image_url ? (
                                             <img
                                                 src={campaign.image_url}
                                                 alt={campaign.title}
                                                 loading="lazy"
-                                                className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                                className="size-full object-cover"
                                             />
                                         ) : (
                                             <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/10">
-                                                <span className="text-3xl font-semibold text-muted-foreground/40">
+                                                <span className="text-2xl font-semibold text-muted-foreground/40">
                                                     {campaign.title.charAt(0)}
                                                 </span>
                                             </div>
@@ -150,42 +149,30 @@ export default function CampaignsIndex({
                                         {campaign.is_sold_out && (
                                             <Badge
                                                 variant="destructive"
-                                                className="absolute top-2 right-2"
+                                                className="absolute top-1.5 right-1.5 text-[10px]"
                                             >
                                                 Sold Out
                                             </Badge>
                                         )}
                                     </div>
 
-                                    {/* Body */}
-                                    <div className="flex flex-col gap-2 p-4">
-                                        <h3 className="line-clamp-1 font-medium group-hover:text-primary">
+                                    {/* Body — compact */}
+                                    <div className="flex flex-col gap-1 p-2.5 sm:p-3">
+                                        <h3 className="line-clamp-2 text-sm leading-snug font-medium group-hover:text-primary">
                                             {campaign.title}
                                         </h3>
-                                        <p className="text-sm text-muted-foreground">
+                                        <p className="text-xs text-muted-foreground sm:text-sm">
                                             {campaign.harga_terendah !== null
                                                 ? `Mulai ${formatPrice(campaign.harga_terendah)}`
                                                 : 'Harga belum ditentukan'}
                                         </p>
-
-                                        {/* Progress */}
-                                        <div className="mt-1 flex flex-col gap-1">
-                                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                                                <div
-                                                    className={`h-full rounded-full transition-all ${campaign.is_sold_out ? 'bg-destructive' : 'bg-primary'}`}
-                                                    style={{
-                                                        width: `${Math.min(100, Math.max(0, campaign.progress_percent))}%`,
-                                                    }}
-                                                />
-                                            </div>
-                                            <p className="text-xs text-muted-foreground">
-                                                {campaign.is_sold_out
-                                                    ? 'Slot habis'
-                                                    : `Sisa ${campaign.available} slot`}
+                                        {!campaign.is_sold_out && (
+                                            <p className="text-[11px] text-muted-foreground">
+                                                Sisa {campaign.available} slot
                                             </p>
-                                        </div>
+                                        )}
                                     </div>
-                                </Card>
+                                </div>
                             </Link>
                         ))}
                     </div>
@@ -193,7 +180,7 @@ export default function CampaignsIndex({
 
                 {/* Pagination */}
                 {pagination.last_page > 1 && (
-                    <div className="flex items-center justify-center gap-1">
+                    <div className="flex items-center justify-center gap-1 pt-2">
                         {pagination.links.map((link, i) => (
                             <Button
                                 key={i}
@@ -219,7 +206,3 @@ export default function CampaignsIndex({
         </>
     );
 }
-
-CampaignsIndex.layout = {
-    breadcrumbs: [{ title: 'Kampanye', href: index.url() }],
-};

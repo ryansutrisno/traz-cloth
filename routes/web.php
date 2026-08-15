@@ -5,10 +5,11 @@ use App\Http\Controllers\Storefront\Auth\RegisteredUserController;
 use App\Http\Controllers\Storefront\CampaignController;
 use App\Http\Controllers\Storefront\CartController;
 use App\Http\Controllers\Storefront\CheckoutController;
+use App\Http\Controllers\Storefront\DashboardController;
 use App\Http\Controllers\Storefront\OrderController;
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'welcome')->name('home');
+Route::redirect('/', '/campaigns')->name('home');
 
 Route::get('/campaigns', [CampaignController::class, 'index'])->name('campaigns.index');
 Route::get('/campaigns/{slug}', [CampaignController::class, 'show'])->name('campaigns.show');
@@ -22,17 +23,17 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
+    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 });
 
 require __DIR__.'/settings.php';
 
-Route::middleware('auth')->group(function (): void {
-    Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
-    Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
-    Route::patch('/cart/{cartItem}', [CartController::class, 'update'])->name('cart.update');
-    Route::delete('/cart/{cartItem}', [CartController::class, 'destroy'])->name('cart.destroy');
+Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+Route::post('/cart/add', [CartController::class, 'add'])->middleware('throttle:10,1')->name('cart.add');
+Route::patch('/cart/{cartItem}', [CartController::class, 'update'])->name('cart.update');
+Route::delete('/cart/{cartItem}', [CartController::class, 'destroy'])->name('cart.destroy');
 
+Route::middleware('auth')->group(function (): void {
     Route::get('/alamat', [AddressController::class, 'index'])->name('addresses.index');
     Route::post('/alamat', [AddressController::class, 'store'])->name('addresses.store');
     Route::patch('/alamat/{address}', [AddressController::class, 'update'])->name('addresses.update');

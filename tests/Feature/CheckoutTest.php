@@ -31,7 +31,8 @@ class CheckoutTest extends TestCase
     public function test_checkout_requires_authentication(): void
     {
         $this->get(route('checkout.index'))
-            ->assertRedirect(route('login'));
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('url.intended', route('checkout.index'));
     }
 
     public function test_user_can_checkout_with_dp(): void

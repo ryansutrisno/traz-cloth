@@ -57,7 +57,7 @@ class CartController extends Controller
         return back();
     }
 
-    public function update(Request $request, CartItem $cartItem): RedirectResponse
+    public function update(Request $request, int $cartItem): RedirectResponse
     {
         $this->ensureOwnership($request, $cartItem);
         $data = $request->validate([
@@ -65,7 +65,7 @@ class CartController extends Controller
         ]);
 
         try {
-            $this->cartService->updateQty($request->user(), $cartItem->id, (int) $data['qty']);
+            $this->cartService->updateQty($request->user(), $cartItem, (int) $data['qty']);
         } catch (DomainException|ValidationException $exception) {
             return back()->withErrors(['qty' => $exception->getMessage()]);
         }
@@ -73,16 +73,21 @@ class CartController extends Controller
         return back();
     }
 
-    public function destroy(Request $request, CartItem $cartItem): RedirectResponse
+    public function destroy(Request $request, int $cartItem): RedirectResponse
     {
         $this->ensureOwnership($request, $cartItem);
-        $this->cartService->remove($request->user(), $cartItem->id);
+        $this->cartService->remove($request->user(), $cartItem);
 
         return back();
     }
 
-    private function ensureOwnership(Request $request, CartItem $cartItem): void
+    private function ensureOwnership(Request $request, int $cartItemId): void
     {
+        if ($request->user() === null) {
+            return;
+        }
+
+        $cartItem = CartItem::query()->findOrFail($cartItemId);
         abort_unless($cartItem->user_id === $request->user()->id, 403);
     }
 }
