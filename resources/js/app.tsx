@@ -10,6 +10,7 @@ import StorefrontLayout from '@/layouts/storefront';
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 const storefrontNames = [
+    'home',
     'campaigns/index',
     'campaigns/show',
     'cart/index',
@@ -20,6 +21,9 @@ const storefrontNames = [
     'orders/show',
     'addresses/index',
     'dashboard',
+    'terms',
+    'privacy',
+    'contact',
 ];
 
 createInertiaApp({

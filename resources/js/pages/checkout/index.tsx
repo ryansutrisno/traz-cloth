@@ -1,5 +1,5 @@
 import { Form, Head, Link, router } from '@inertiajs/react';
-import { ShieldAlert } from 'lucide-react';
+import { Check, ShieldAlert } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -67,6 +67,9 @@ function formatPrice(value: number): string {
     return rupiah.format(value);
 }
 
+const STEPS = ['Keranjang', 'Alamat & Kurir', 'Pembayaran', 'Selesai'] as const;
+const ACTIVE_STEP = 2; // 'Pembayaran'
+
 export default function CheckoutIndex({
     items,
     subtotal,
@@ -117,6 +120,11 @@ export default function CheckoutIndex({
 
     const canSubmit = !!selectedAddressId && !!selectedRate && !!paymentMode;
 
+    const submitLabel =
+        paymentMode === 'dp'
+            ? `Bayar DP ${formatPrice(payNow)}`
+            : `Bayar Lunas ${formatPrice(payNow)}`;
+
     return (
         <>
             <Head title="Checkout" />
@@ -129,6 +137,55 @@ export default function CheckoutIndex({
                         Pilih cara bayar dan konfirmasi pesanan
                     </p>
                 </div>
+
+                {/* Progress stepper — murni visual */}
+                <ol className="flex items-center gap-1 text-xs sm:gap-2">
+                    {STEPS.map((step, i) => {
+                        const isDone = i < ACTIVE_STEP;
+                        const isActive = i === ACTIVE_STEP;
+
+                        return (
+                            <li
+                                key={step}
+                                className="flex flex-1 items-center gap-1 sm:gap-2"
+                            >
+                                <span
+                                    className={`flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-medium sm:size-7 sm:text-xs ${
+                                        isDone
+                                            ? 'bg-primary text-primary-foreground'
+                                            : isActive
+                                              ? 'border-2 border-primary bg-primary/10 text-primary'
+                                              : 'bg-muted text-muted-foreground'
+                                    }`}
+                                >
+                                    {isDone ? (
+                                        <Check className="size-3.5" />
+                                    ) : (
+                                        i + 1
+                                    )}
+                                </span>
+                                <span
+                                    className={`hidden truncate sm:inline ${
+                                        isActive
+                                            ? 'font-medium text-foreground'
+                                            : 'text-muted-foreground'
+                                    }`}
+                                >
+                                    {step}
+                                </span>
+                                {i < STEPS.length - 1 && (
+                                    <span
+                                        className={`h-px flex-1 ${
+                                            i < ACTIVE_STEP
+                                                ? 'bg-primary'
+                                                : 'bg-border'
+                                        }`}
+                                    />
+                                )}
+                            </li>
+                        );
+                    })}
+                </ol>
 
                 <Form
                     {...store.form()}
@@ -382,64 +439,69 @@ export default function CheckoutIndex({
                                     </div>
                                 </Card>
 
-                                {/* Payment mode */}
+                                {/* Payment mode — kartu pilihan menonjol */}
                                 <Card className="gap-3 p-4">
                                     <h2 className="font-medium">
                                         Cara Pembayaran
                                     </h2>
-                                    <div className="flex flex-col gap-2">
+                                    <div className="grid gap-2 sm:grid-cols-2">
                                         {payment_modes.map((mode) => {
                                             const isSelected =
                                                 paymentMode === mode;
-                                            const amount =
-                                                mode === 'dp'
-                                                    ? dp_amount
-                                                    : subtotal;
+                                            const isDp = mode === 'dp';
+                                            const amount = isDp
+                                                ? dp_amount
+                                                : subtotal;
 
                                             return (
                                                 <label
                                                     key={mode}
                                                     htmlFor={`mode-${mode}`}
-                                                    className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                                                    className={`flex cursor-pointer flex-col gap-2 rounded-lg border-2 p-4 transition-all ${
                                                         isSelected
-                                                            ? 'border-primary bg-primary/5'
-                                                            : 'hover:bg-muted/50'
+                                                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                                                            : 'border-border hover:border-muted-foreground/30'
                                                     }`}
                                                 >
-                                                    <input
-                                                        id={`mode-${mode}`}
-                                                        type="radio"
-                                                        name="payment_mode_radio"
-                                                        value={mode}
-                                                        checked={isSelected}
-                                                        onChange={() =>
-                                                            setPaymentMode(mode)
-                                                        }
-                                                        className="mt-1 size-4 accent-primary"
-                                                    />
-                                                    <div className="flex flex-1 flex-col gap-0.5">
-                                                        <span className="font-medium">
-                                                            {mode === 'dp'
-                                                                ? 'DP 50% dulu'
-                                                                : 'Langsung lunas'}
-                                                        </span>
-                                                        <span className="text-sm text-muted-foreground">
-                                                            Bayar{' '}
-                                                            {formatPrice(
-                                                                amount,
-                                                            )}{' '}
-                                                            {mode === 'dp'
-                                                                ? '(sisa dilunasi setelah barang siap)'
-                                                                : '(lunas penuh)'}
-                                                        </span>
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div className="flex flex-col gap-0.5">
+                                                            <span className="text-base font-semibold">
+                                                                {isDp
+                                                                    ? 'DP 50%'
+                                                                    : 'Bayar Lunas'}
+                                                            </span>
+                                                            <span className="text-xs text-muted-foreground">
+                                                                {isDp
+                                                                    ? 'Lunasi setelah barang siap'
+                                                                    : 'Langsung diproses cetak'}
+                                                            </span>
+                                                        </div>
+                                                        <input
+                                                            id={`mode-${mode}`}
+                                                            type="radio"
+                                                            name="payment_mode_radio"
+                                                            value={mode}
+                                                            checked={isSelected}
+                                                            onChange={() =>
+                                                                setPaymentMode(
+                                                                    mode,
+                                                                )
+                                                            }
+                                                            className="size-4 accent-primary"
+                                                        />
                                                     </div>
-                                                    <span className="font-medium tabular-nums">
+                                                    <span className="text-lg font-bold tabular-nums">
                                                         {formatPrice(amount)}
                                                     </span>
                                                 </label>
                                             );
                                         })}
                                     </div>
+
+                                    <p className="text-xs text-muted-foreground">
+                                        Desain kamu diproses cetak &amp; dikirim
+                                        setelah pembayaran dikonfirmasi.
+                                    </p>
 
                                     {paymentMode === 'dp' && (
                                         <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
@@ -583,7 +645,7 @@ export default function CheckoutIndex({
                                         disabled={processing || !canSubmit}
                                     >
                                         {processing && <Spinner />}
-                                        Bayar Sekarang
+                                        {submitLabel}
                                     </Button>
                                     <Button
                                         asChild

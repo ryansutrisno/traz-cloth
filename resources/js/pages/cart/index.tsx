@@ -1,6 +1,7 @@
 import { Form, Head, Link, router, usePage } from '@inertiajs/react';
-import { Minus, Plus, Trash2 } from 'lucide-react';
+import { Minus, Plus, ShieldCheck, Trash2, Truck } from 'lucide-react';
 import { useState } from 'react';
+import CampaignMockup from '@/components/campaign-mockup';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
@@ -80,7 +81,9 @@ export default function CartIndex({ items, total, empty }: Props) {
             return;
         }
 
-        router.delete(destroy.url({ cartItem: item.id }), { preserveScroll: true });
+        router.delete(destroy.url({ cartItem: item.id }), {
+            preserveScroll: true,
+        });
     };
 
     const handleCheckout = () => {
@@ -105,9 +108,7 @@ export default function CartIndex({ items, total, empty }: Props) {
                         Yuk pilih desain kaos pre-order favorit kamu.
                     </p>
                     <Button asChild>
-                        <Link href={campaignsIndex.url()}>
-                            Lihat Koleksi Kampanye
-                        </Link>
+                        <Link href={campaignsIndex.url()}>Lihat Koleksi</Link>
                     </Button>
                 </div>
             </>
@@ -137,20 +138,19 @@ export default function CartIndex({ items, total, empty }: Props) {
                                 className="gap-0 p-4"
                             >
                                 <div className="flex gap-4">
-                                    {/* Image */}
-                                    <div className="size-20 shrink-0 overflow-hidden rounded-lg bg-muted">
-                                        {item.image_url ? (
-                                            <img
-                                                src={item.image_url}
-                                                alt={item.title}
-                                                className="size-full object-cover"
-                                            />
-                                        ) : (
-                                            <div className="flex size-full items-center justify-center text-xl font-semibold text-muted-foreground/40">
-                                                {item.title.charAt(0)}
-                                            </div>
-                                        )}
-                                    </div>
+                                    {/* Mockup mini */}
+                                    {item.image_url ? (
+                                        <CampaignMockup
+                                            src={item.image_url}
+                                            alt={item.title}
+                                            badge={item.size}
+                                            className="w-20 shrink-0"
+                                        />
+                                    ) : (
+                                        <div className="flex aspect-[4/5] w-20 shrink-0 items-center justify-center rounded-lg bg-muted text-xl font-semibold text-muted-foreground/40">
+                                            {item.title.charAt(0)}
+                                        </div>
+                                    )}
 
                                     {/* Info */}
                                     <div className="flex flex-1 flex-col gap-1">
@@ -260,7 +260,7 @@ export default function CartIndex({ items, total, empty }: Props) {
                                         Ongkir
                                     </span>
                                     <span className="text-muted-foreground">
-                                        Dihitung saat pelunasan
+                                        Dihitung saat checkout
                                     </span>
                                 </div>
                             </div>
@@ -289,6 +289,18 @@ export default function CartIndex({ items, total, empty }: Props) {
                                     Tambah Pesanan
                                 </Link>
                             </Button>
+
+                            {/* Trust row */}
+                            <div className="flex flex-col gap-1.5 border-t pt-3 text-xs text-muted-foreground">
+                                <div className="flex items-center gap-1.5">
+                                    <ShieldCheck className="size-3.5 shrink-0 text-green-600" />
+                                    <span>Pembayaran aman via Midtrans</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <Truck className="size-3.5 shrink-0" />
+                                    <span>Ongkir dihitung saat checkout</span>
+                                </div>
+                            </div>
                         </Card>
                     </div>
                 </div>
