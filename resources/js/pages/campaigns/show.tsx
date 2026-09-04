@@ -1,5 +1,16 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Minus, Plus, ShoppingCart } from 'lucide-react';
+import {
+    Check,
+    ChevronRight,
+    Lock,
+    Minus,
+    PenTool,
+    Plus,
+    Ruler,
+    ShoppingCart,
+    TrendingUp,
+    Truck,
+} from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -7,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { add } from '@/routes/cart';
 import { index } from '@/routes/campaigns';
 
@@ -68,10 +80,13 @@ export default function CampaignsShow({
 
     const canBuy = available > 0 && !is_sold_out;
 
-    const selectedPrice =
+    const firstPrice = sizes[0]
+        ? price_by_size[sizes[0]].price
+        : campaign.base_price;
+    const displayPrice =
         selectedSize !== '' && price_by_size[selectedSize]
             ? price_by_size[selectedSize].price
-            : null;
+            : firstPrice;
 
     const handleAddToCart = () => {
         if (!selectedSize) {
@@ -109,20 +124,26 @@ export default function CampaignsShow({
     return (
         <>
             <Head title={campaign.title} />
-            <div className="flex flex-1 flex-col gap-6">
+            <div className="flex flex-col gap-8">
                 {/* Breadcrumb */}
-                <div>
-                    <Button variant="ghost" size="sm" asChild>
-                        <Link href={index.url()} className="gap-1">
-                            <span aria-hidden>←</span> Semua kampanye
-                        </Link>
-                    </Button>
-                </div>
+                <nav className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Link
+                        href={index.url()}
+                        className="transition-colors hover:text-primary"
+                    >
+                        Katalog
+                    </Link>
+                    <ChevronRight className="size-4" />
+                    <span className="truncate font-medium text-foreground">
+                        {campaign.title}
+                    </span>
+                </nav>
 
-                <div className="grid gap-8 lg:grid-cols-2">
-                    {/* Image */}
-                    <div className="overflow-hidden rounded-xl border bg-muted">
-                        <div className="relative aspect-[4/5] w-full">
+                <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-10">
+                    {/* Kolom kiri: visual & detail */}
+                    <div className="flex flex-col gap-10 lg:col-span-7">
+                        {/* Visual utama */}
+                        <div className="relative aspect-square overflow-hidden rounded-xl border bg-muted md:aspect-[4/3]">
                             {campaign.image_url ? (
                                 <img
                                     src={campaign.image_url}
@@ -136,75 +157,33 @@ export default function CampaignsShow({
                                     </span>
                                 </div>
                             )}
-                        </div>
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex flex-col gap-5">
-                        <div className="flex flex-col gap-2">
-                            <div className="flex items-start justify-between gap-3">
-                                <h1
-                                    data-test="campaign-title"
-                                    className="text-2xl font-semibold tracking-tight md:text-3xl"
-                                >
-                                    {campaign.title}
-                                </h1>
-                                {is_sold_out && (
-                                    <Badge variant="destructive">
-                                        Sold Out
-                                    </Badge>
-                                )}
-                            </div>
+                            <span className="absolute top-4 left-4 rounded-full bg-background/90 px-3 py-1 text-xs font-medium tracking-wider text-foreground uppercase backdrop-blur-sm">
+                                Mockup
+                            </span>
                         </div>
 
-                        {/* Description */}
-                        {campaign.description && (
-                            <p className="text-sm whitespace-pre-line text-muted-foreground">
-                                {campaign.description}
-                            </p>
-                        )}
+                        {/* Tentang desain */}
+                        <section className="flex flex-col gap-4">
+                            <h2 className="flex items-center gap-3 text-xl font-semibold tracking-tight md:text-2xl">
+                                <PenTool className="size-5 text-primary" />
+                                Tentang Desain
+                            </h2>
+                            {campaign.description ? (
+                                <p className="text-sm whitespace-pre-line text-muted-foreground md:text-base">
+                                    {campaign.description}
+                                </p>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">
+                                    Belum ada deskripsi untuk desain ini.
+                                </p>
+                            )}
+                        </section>
 
-                        {/* Sold out alert */}
-                        {is_sold_out && (
-                            <Alert variant="destructive">
-                                <AlertTitle>Slot habis</AlertTitle>
-                                <AlertDescription>
-                                    Kampanye ini sudah sold out. Slot pre-order
-                                    tidak tersedia lagi.
-                                </AlertDescription>
-                            </Alert>
-                        )}
-
-                        {/* Quota progress */}
-                        <Card className="gap-3 p-4">
-                            <div className="flex items-center justify-between text-sm">
-                                <span className="font-medium">
-                                    Kuota pre-order
-                                </span>
-                                <span className="text-muted-foreground">
-                                    {campaign.sold_count} / {campaign.quota}{' '}
-                                    terisi
-                                </span>
-                            </div>
-                            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                                <div
-                                    className={`h-full rounded-full transition-all ${is_sold_out ? 'bg-destructive' : 'bg-primary'}`}
-                                    style={{
-                                        width: `${Math.min(100, Math.max(0, progress_percent))}%`,
-                                    }}
-                                />
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                                {is_sold_out
-                                    ? 'Slot habis'
-                                    : `Sisa ${available} slot`}
-                            </p>
-                        </Card>
-
-                        {/* Size table */}
-                        <div className="flex flex-col gap-3">
-                            <h2 className="text-lg font-medium">
-                                Pilih ukuran
+                        {/* Ukuran & harga */}
+                        <section className="flex flex-col gap-4 border-t pt-8">
+                            <h2 className="flex items-center gap-3 text-xl font-semibold tracking-tight md:text-2xl">
+                                <Ruler className="size-5 text-primary" />
+                                Ukuran &amp; Harga
                             </h2>
                             <div className="overflow-hidden rounded-xl border">
                                 <table className="w-full text-sm">
@@ -248,6 +227,7 @@ export default function CampaignsShow({
                                                                 variant="secondary"
                                                                 className="gap-1"
                                                             >
+                                                                <Check className="size-3 text-green-600" />
                                                                 READY
                                                                 <span className="text-muted-foreground">
                                                                     {
@@ -271,127 +251,216 @@ export default function CampaignsShow({
                                 Harga sudah termasuk biaya press. Ready stock
                                 berasal dari order batal.
                             </p>
-                        </div>
+                        </section>
+                    </div>
 
-                        {/* Buy section */}
-                        {canBuy && (
-                            <div className="flex flex-col gap-3 border-t pt-5">
-                                <h2 className="text-lg font-medium">
-                                    Pesan Sekarang
-                                </h2>
-
-                                {/* Size picker */}
-                                <div className="flex flex-col gap-2">
-                                    <span className="text-sm text-muted-foreground">
-                                        Pilih ukuran
+                    {/* Kolom kanan: kartu aksi sticky */}
+                    <div className="relative lg:col-span-5">
+                        <div className="flex flex-col gap-6 lg:sticky lg:top-24">
+                            <Card className="gap-0 p-6 shadow-sm md:p-8">
+                                <div className="mb-4 flex flex-col gap-2">
+                                    <span
+                                        className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold tracking-wider uppercase ${
+                                            is_sold_out
+                                                ? 'bg-destructive/10 text-destructive'
+                                                : 'bg-primary/10 text-primary'
+                                        }`}
+                                    >
+                                        {is_sold_out
+                                            ? 'Sold Out'
+                                            : 'Kampanye Aktif'}
                                     </span>
-                                    <div className="flex flex-wrap gap-2">
-                                        {sizes.map((size) => {
-                                            const isSelected =
-                                                selectedSize === size;
+                                    <h1
+                                        data-test="campaign-title"
+                                        className="text-2xl leading-tight font-bold tracking-tight md:text-3xl"
+                                    >
+                                        {campaign.title}
+                                    </h1>
+                                </div>
 
-                                            return (
-                                                <button
-                                                    key={size}
-                                                    type="button"
-                                                    data-test={`size-select-${size}`}
-                                                    onClick={() =>
-                                                        setSelectedSize(size)
-                                                    }
-                                                    className={`min-w-11 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
-                                                        isSelected
-                                                            ? 'border-primary bg-primary text-primary-foreground'
-                                                            : 'hover:bg-muted'
-                                                    }`}
-                                                >
-                                                    {size}
-                                                </button>
-                                            );
-                                        })}
+                                {/* Harga dinamis */}
+                                <div className="mb-8 text-3xl font-bold tabular-nums">
+                                    {formatPrice(displayPrice)}
+                                    <span className="ml-1 text-sm font-normal text-muted-foreground">
+                                        / pcs
+                                    </span>
+                                </div>
+
+                                {/* Progres kuota */}
+                                <div className="mb-8">
+                                    <div className="mb-2 flex items-end justify-between">
+                                        <div>
+                                            <span className="block text-xl font-semibold tabular-nums">
+                                                {campaign.sold_count}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground">
+                                                Slot terisi
+                                            </span>
+                                        </div>
+                                        <span className="text-xs font-medium text-primary">
+                                            Kuota: {campaign.quota}
+                                        </span>
+                                    </div>
+                                    <div className="relative mb-3 h-3 w-full overflow-hidden rounded-full bg-muted">
+                                        <div
+                                            className={`h-full rounded-full ${
+                                                is_sold_out
+                                                    ? 'bg-destructive'
+                                                    : 'bg-primary'
+                                            }`}
+                                            style={{
+                                                width: `${Math.min(100, Math.max(0, progress_percent))}%`,
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="flex justify-between text-xs">
+                                        <span className="flex items-center gap-1 font-medium text-primary">
+                                            <TrendingUp className="size-3.5" />
+                                            {progress_percent}% terisi
+                                        </span>
+                                        <span className="font-medium text-muted-foreground">
+                                            {is_sold_out
+                                                ? 'Slot habis'
+                                                : `Sisa ${available} slot`}
+                                        </span>
                                     </div>
                                 </div>
 
-                                {/* Qty + price + add */}
-                                <div className="flex flex-col gap-3">
-                                    {selectedPrice !== null && (
-                                        <p className="text-sm">
-                                            Harga:{' '}
-                                            <span className="font-medium tabular-nums">
-                                                {formatPrice(selectedPrice)}
-                                            </span>{' '}
-                                            / pcs
-                                        </p>
-                                    )}
+                                {is_sold_out && (
+                                    <Alert
+                                        variant="destructive"
+                                        className="mb-6"
+                                    >
+                                        <AlertTitle>Slot habis</AlertTitle>
+                                        <AlertDescription>
+                                            Kampanye ini sudah sold out. Slot
+                                            pre-order tidak tersedia lagi.
+                                        </AlertDescription>
+                                    </Alert>
+                                )}
 
-                                    <div className="flex flex-wrap items-center gap-3">
-                                        {/* Qty controls */}
-                                        <div className="flex items-center gap-1">
-                                            <Button
-                                                type="button"
-                                                size="icon"
-                                                variant="outline"
-                                                className="size-9"
-                                                disabled={qty <= 1}
-                                                onClick={() =>
-                                                    setQty((q) => q - 1)
-                                                }
-                                                aria-label="Kurangi jumlah"
-                                            >
-                                                <Minus className="size-4" />
-                                            </Button>
-                                            <Input
-                                                data-test="qty-input"
-                                                type="number"
-                                                min={1}
-                                                value={qty}
-                                                onChange={(e) =>
-                                                    setQty(
-                                                        Math.max(
-                                                            1,
-                                                            Number(
-                                                                e.target.value,
-                                                            ) || 1,
-                                                        ),
-                                                    )
-                                                }
-                                                className="h-9 w-16 text-center"
-                                                aria-label="Jumlah"
-                                            />
-                                            <Button
-                                                type="button"
-                                                size="icon"
-                                                variant="outline"
-                                                className="size-9"
-                                                onClick={() =>
-                                                    setQty((q) => q + 1)
-                                                }
-                                                aria-label="Tambah jumlah"
-                                            >
-                                                <Plus className="size-4" />
-                                            </Button>
+                                {/* Aksi beli */}
+                                {canBuy && (
+                                    <div className="flex flex-col gap-4">
+                                        <div>
+                                            <span className="mb-2 block text-sm font-medium">
+                                                Pilih ukuran
+                                            </span>
+                                            <div className="grid grid-cols-5 gap-2">
+                                                {sizes.map((size) => {
+                                                    const isSelected =
+                                                        selectedSize === size;
+
+                                                    return (
+                                                        <button
+                                                            key={size}
+                                                            type="button"
+                                                            data-test={`size-select-${size}`}
+                                                            onClick={() =>
+                                                                setSelectedSize(
+                                                                    size,
+                                                                )
+                                                            }
+                                                            className={`rounded-lg py-2 text-sm transition-colors ${
+                                                                isSelected
+                                                                    ? 'border-2 border-primary bg-primary/5 font-bold text-primary'
+                                                                    : 'border font-medium hover:border-primary hover:bg-primary/5'
+                                                            }`}
+                                                        >
+                                                            {size}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <span className="mb-2 block text-sm font-medium">
+                                                Jumlah
+                                            </span>
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    type="button"
+                                                    size="icon"
+                                                    variant="outline"
+                                                    disabled={qty <= 1}
+                                                    onClick={() =>
+                                                        setQty((q) => q - 1)
+                                                    }
+                                                    aria-label="Kurangi jumlah"
+                                                >
+                                                    <Minus className="size-4" />
+                                                </Button>
+                                                <Input
+                                                    data-test="qty-input"
+                                                    type="number"
+                                                    min={1}
+                                                    value={qty}
+                                                    onChange={(e) =>
+                                                        setQty(
+                                                            Math.max(
+                                                                1,
+                                                                Number(
+                                                                    e.target
+                                                                        .value,
+                                                                ) || 1,
+                                                            ),
+                                                        )
+                                                    }
+                                                    className="h-10 w-16 text-center"
+                                                    aria-label="Jumlah"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    size="icon"
+                                                    variant="outline"
+                                                    onClick={() =>
+                                                        setQty((q) => q + 1)
+                                                    }
+                                                    aria-label="Tambah jumlah"
+                                                >
+                                                    <Plus className="size-4" />
+                                                </Button>
+                                            </div>
                                         </div>
 
                                         <Button
                                             type="button"
                                             data-test="add-to-cart-button"
-                                            className="gap-1.5"
+                                            className="h-12 w-full gap-2 text-base"
                                             disabled={!selectedSize || adding}
                                             onClick={handleAddToCart}
                                         >
-                                            <ShoppingCart className="size-4" />
+                                            {adding ? (
+                                                <Spinner />
+                                            ) : (
+                                                <ShoppingCart className="size-5" />
+                                            )}
                                             Tambah ke Keranjang
                                         </Button>
-                                    </div>
 
-                                    {!selectedSize && (
-                                        <p className="text-xs text-muted-foreground">
-                                            Pilih ukuran untuk menambahkan ke
-                                            keranjang.
-                                        </p>
-                                    )}
+                                        {!selectedSize && (
+                                            <p className="text-center text-xs text-muted-foreground">
+                                                Pilih ukuran untuk menambahkan
+                                                ke keranjang.
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Trust badges */}
+                                <div className="mt-6 flex justify-center gap-6 opacity-80">
+                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                        <Lock className="size-4" />
+                                        Pembayaran aman
+                                    </div>
+                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                        <Truck className="size-4" />
+                                        Kirim seluruh Indonesia
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            </Card>
+                        </div>
                     </div>
                 </div>
             </div>

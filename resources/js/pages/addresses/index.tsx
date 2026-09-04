@@ -1,9 +1,8 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { MapPin, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Briefcase, Home, MapPin, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import InputError from '@/components/input-error';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -58,6 +57,20 @@ const EMPTY_FORM: FormValues = {
 
 const textAreaClass =
     'flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
+
+function labelIcon(label: string): typeof Home {
+    const normalized = label.toLowerCase();
+
+    if (normalized.includes('rumah') || normalized.includes('home')) {
+        return Home;
+    }
+
+    if (normalized.includes('kantor') || normalized.includes('studio')) {
+        return Briefcase;
+    }
+
+    return MapPin;
+}
 
 export default function AddressesIndex({ addresses }: Props) {
     const [editingId, setEditingId] = useState<number | null>(null);
@@ -155,33 +168,22 @@ export default function AddressesIndex({ addresses }: Props) {
     return (
         <>
             <Head title="Alamat Saya" />
-            <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex flex-col gap-1">
-                        <h1 className="text-2xl font-semibold tracking-tight">
-                            Alamat Saya
-                        </h1>
-                        <p className="text-sm text-muted-foreground">
-                            Kelola alamat pengiriman kamu
-                        </p>
-                    </div>
-                    {!showForm && (
-                        <Button
-                            onClick={startCreate}
-                            className="gap-1.5"
-                            data-test="add-address-button"
-                        >
-                            <Plus className="size-4" />
-                            Tambah Alamat
-                        </Button>
-                    )}
+            <div className="flex flex-col gap-8">
+                {/* Header */}
+                <div className="flex flex-col gap-1">
+                    <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+                        Alamat Saya
+                    </h1>
+                    <p className="text-sm text-muted-foreground md:text-base">
+                        Kelola alamat pengiriman untuk checkout lebih cepat.
+                    </p>
                 </div>
 
-                {/* Form */}
+                {/* Form tambah/edit */}
                 {showForm && (
-                    <Card className="gap-4 p-4">
+                    <Card className="gap-4 p-4 md:p-6">
                         <div className="flex items-center justify-between">
-                            <h2 className="font-medium">
+                            <h2 className="text-lg font-semibold">
                                 {editingId ? 'Edit Alamat' : 'Tambah Alamat'}
                             </h2>
                             <Button
@@ -402,96 +404,111 @@ export default function AddressesIndex({ addresses }: Props) {
                     </Card>
                 )}
 
-                {/* List */}
-                {addresses.length === 0 && !showForm ? (
-                    <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
-                        <MapPin className="size-12 text-muted-foreground/40" />
-                        <p className="text-lg font-medium">Belum ada alamat</p>
-                        <p className="text-sm text-muted-foreground">
-                            Tambahkan alamat pengiriman untuk checkout lebih
-                            cepat.
-                        </p>
-                        <Button
-                            onClick={startCreate}
-                            className="gap-1.5"
-                            data-test="add-address-button"
-                        >
-                            <Plus className="size-4" />
-                            Tambah Alamat
-                        </Button>
-                    </div>
-                ) : (
-                    <div className="flex flex-col gap-3">
-                        {addresses.map((address) => (
-                            <Card
+                {/* Grid alamat */}
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {addresses.map((address) => {
+                        const Icon = labelIcon(address.label);
+
+                        return (
+                            <div
                                 key={address.id}
                                 data-test="address-card"
-                                className="gap-3 p-4"
+                                className="relative flex flex-col rounded-xl border bg-card p-6 transition-shadow hover:shadow-md"
                             >
-                                <div className="flex flex-wrap items-start justify-between gap-3">
-                                    <div className="flex flex-col gap-1">
-                                        <div className="flex items-center gap-2">
-                                            <Badge variant="secondary">
-                                                {address.label}
-                                            </Badge>
-                                            {address.is_default && (
-                                                <Badge>Utama</Badge>
-                                            )}
-                                        </div>
-                                        <p className="font-medium">
-                                            {address.recipient_name}
-                                        </p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {address.full_address}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {address.province}, {address.city},{' '}
-                                            {address.district},{' '}
-                                            {address.subdistrict}{' '}
-                                            {address.postal_code}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {address.phone}
-                                        </p>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        {!address.is_default && (
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                data-test="set-default-address-button"
-                                                onClick={() =>
-                                                    handleSetDefault(address)
-                                                }
-                                            >
-                                                Set Utama
-                                            </Button>
-                                        )}
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            data-test="edit-address-button"
-                                            onClick={() => startEdit(address)}
-                                        >
-                                            <Pencil className="size-4" />
-                                            Edit
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="text-destructive hover:text-destructive"
-                                            data-test="delete-address-button"
-                                            onClick={() =>
-                                                handleDelete(address)
-                                            }
-                                        >
-                                            <Trash2 className="size-4" />
-                                        </Button>
-                                    </div>
+                                {address.is_default && (
+                                    <span className="absolute top-4 right-4 inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+                                        Utama
+                                    </span>
+                                )}
+
+                                <div className="mb-4 flex items-center gap-3">
+                                    <span className="rounded-lg bg-primary/10 p-2 text-primary">
+                                        <Icon className="size-5" />
+                                    </span>
+                                    <h3 className="text-lg font-semibold tracking-tight">
+                                        {address.label}
+                                    </h3>
                                 </div>
-                            </Card>
-                        ))}
-                    </div>
+
+                                <div className="mb-6 flex flex-col gap-1 text-sm text-muted-foreground">
+                                    <p className="font-semibold text-foreground">
+                                        {address.recipient_name}
+                                    </p>
+                                    <p>{address.full_address}</p>
+                                    <p>
+                                        {address.district},{' '}
+                                        {address.subdistrict}
+                                    </p>
+                                    <p>
+                                        {address.city}, {address.province}{' '}
+                                        {address.postal_code}
+                                    </p>
+                                    <p className="pt-2">{address.phone}</p>
+                                </div>
+
+                                <div className="mt-auto flex items-center gap-3 border-t pt-4">
+                                    <button
+                                        type="button"
+                                        data-test="edit-address-button"
+                                        onClick={() => startEdit(address)}
+                                        className="text-sm font-medium text-primary transition-colors hover:underline"
+                                    >
+                                        Edit
+                                    </button>
+                                    <span className="text-border">|</span>
+                                    <button
+                                        type="button"
+                                        data-test="delete-address-button"
+                                        onClick={() => handleDelete(address)}
+                                        className="flex items-center gap-1 text-sm font-medium text-destructive transition-colors hover:underline"
+                                    >
+                                        <Trash2 className="size-3.5" />
+                                        Hapus
+                                    </button>
+                                    {!address.is_default && (
+                                        <button
+                                            type="button"
+                                            data-test="set-default-address-button"
+                                            onClick={() =>
+                                                handleSetDefault(address)
+                                            }
+                                            className="ml-auto text-xs font-medium text-muted-foreground transition-colors hover:text-primary"
+                                        >
+                                            Set Utama
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+
+                    {/* Kartu tambah alamat — dashed */}
+                    {!showForm && (
+                        <button
+                            type="button"
+                            data-test="add-address-button"
+                            onClick={startCreate}
+                            className="group flex min-h-[250px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed bg-muted/20 p-6 transition-colors hover:border-primary hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                        >
+                            <span className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                                <Plus className="size-6" />
+                            </span>
+                            <h3 className="text-lg font-semibold group-hover:text-primary">
+                                Tambah Alamat Baru
+                            </h3>
+                            <p className="mt-2 max-w-[220px] text-center text-sm text-muted-foreground">
+                                Simpan alamat lain untuk mempercepat checkout.
+                            </p>
+                        </button>
+                    )}
+                </div>
+
+                {/* Info kosong */}
+                {addresses.length === 0 && !showForm && (
+                    <p className="text-center text-sm text-muted-foreground">
+                        Belum ada alamat tersimpan. Tambahkan alamat pertama
+                        kamu lewat kartu di atas.
+                    </p>
                 )}
             </div>
         </>
@@ -499,5 +516,6 @@ export default function AddressesIndex({ addresses }: Props) {
 }
 
 AddressesIndex.layout = {
-    breadcrumbs: [{ title: 'Alamat Saya', href: '#', icon: MapPin }],
+    title: 'Alamat Saya',
+    description: 'Kelola alamat pengiriman kamu',
 };

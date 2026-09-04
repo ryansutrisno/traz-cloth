@@ -1,62 +1,87 @@
-// Components
 import { Form, Head } from '@inertiajs/react';
-import { LoaderCircle } from 'lucide-react';
+import { ArrowLeft, Mail, MailCheck } from 'lucide-react';
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
 import { login } from '@/routes';
 import { email } from '@/routes/password';
 
 export default function ForgotPassword({ status }: { status?: string }) {
     return (
         <>
-            <Head title="Forgot password" />
+            <Head title="Lupa Kata Sandi" />
 
-            {status && (
-                <div className="mb-4 text-center text-sm font-medium text-green-600">
-                    {status}
-                </div>
-            )}
+            <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+                {/* Strip gradasi atas ala kartu Stitch */}
+                <div className="h-1 bg-gradient-to-r from-primary to-primary/30" />
 
-            <div className="space-y-6">
-                <Form {...email.form()}>
-                    {({ processing, errors }) => (
-                        <>
-                            <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    name="email"
-                                    autoComplete="off"
-                                    autoFocus
-                                    placeholder="email@example.com"
-                                />
+                <div className="flex flex-col gap-6 p-6 sm:p-8">
+                    {/* Ikon reset */}
+                    <div className="flex justify-center">
+                        <span className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                            <MailCheck className="size-7" />
+                        </span>
+                    </div>
 
-                                <InputError message={errors.email} />
-                            </div>
-
-                            <div className="my-6 flex items-center justify-start">
-                                <Button
-                                    className="w-full"
-                                    disabled={processing}
-                                    data-test="email-password-reset-link-button"
-                                >
-                                    {processing && (
-                                        <LoaderCircle className="h-4 w-4 animate-spin" />
-                                    )}
-                                    Email password reset link
-                                </Button>
-                            </div>
-                        </>
+                    {status && (
+                        <div className="rounded-lg bg-green-50 p-3 text-center text-sm font-medium text-green-700 dark:bg-green-950/30 dark:text-green-400">
+                            {status}
+                        </div>
                     )}
-                </Form>
 
-                <div className="space-x-1 text-center text-sm text-muted-foreground">
-                    <span>Or, return to</span>
-                    <TextLink href={login()}>log in</TextLink>
+                    <div className="flex flex-col gap-5">
+                        <Form {...email.form()}>
+                            {({ processing, errors }) => (
+                                <>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="email">
+                                            Alamat Email
+                                        </Label>
+                                        <div className="relative">
+                                            <Mail className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                                            <Input
+                                                id="email"
+                                                type="email"
+                                                name="email"
+                                                autoComplete="off"
+                                                autoFocus
+                                                placeholder="nama@example.com"
+                                                className="h-11 pl-10"
+                                            />
+                                        </div>
+                                        <InputError message={errors.email} />
+                                    </div>
+
+                                    <Button
+                                        className="h-12 w-full text-base"
+                                        disabled={processing}
+                                        data-test="email-password-reset-link-button"
+                                    >
+                                        {processing && <Spinner />}
+                                        Kirim Tautan Reset
+                                    </Button>
+                                </>
+                            )}
+                        </Form>
+
+                        <div className="text-center">
+                            <TextLink
+                                href={login()}
+                                className="inline-flex items-center gap-1.5"
+                            >
+                                <ArrowLeft className="size-4" />
+                                Kembali ke Masuk
+                            </TextLink>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Catatan keamanan */}
+                <div className="flex items-center justify-center gap-1.5 border-t bg-muted/50 px-6 py-3 text-xs text-muted-foreground">
+                    Tautan reset berlaku selama 60 menit setelah dikirim.
                 </div>
             </div>
         </>
@@ -64,6 +89,6 @@ export default function ForgotPassword({ status }: { status?: string }) {
 }
 
 ForgotPassword.layout = {
-    title: 'Forgot password',
-    description: 'Enter your email to receive a password reset link',
+    title: 'Lupa Kata Sandi',
+    description: 'Masukkan email kamu untuk menerima tautan reset kata sandi',
 };

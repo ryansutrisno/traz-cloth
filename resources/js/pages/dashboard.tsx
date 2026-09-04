@@ -1,5 +1,11 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ArrowRight, MapPin, Package, ShoppingBag } from 'lucide-react';
+import {
+    ArrowRight,
+    HeartHandshake,
+    MapPin,
+    Package,
+    ShoppingBag,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -86,173 +92,189 @@ export default function Dashboard({
 }: Props) {
     const { auth } = usePage().props;
     const userName = auth.user?.name ?? 'Pembeli';
+    const firstName = userName.split(' ')[0];
 
     return (
         <>
             <Head title="Akun Saya" />
-            <div className="flex flex-col gap-4 md:gap-6">
-                {/* Greeting */}
-                <div className="flex flex-col gap-1 pt-2">
-                    <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
-                        Halo, {userName}! 👋
+            <div className="flex flex-col gap-8">
+                {/* Sambutan */}
+                <header className="flex flex-col gap-1">
+                    <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+                        Halo kembali, {firstName}.
                     </h1>
-                    <p className="text-sm text-muted-foreground">
-                        Kelola pesanan dan alamat kamu di sini.
+                    <p className="text-base text-muted-foreground">
+                        Ringkasan pre-order dan aktivitas akun kamu.
                     </p>
-                </div>
+                </header>
 
-                {/* Stats */}
-                <div className="grid grid-cols-2 gap-3">
-                    <Card className="gap-1 p-3 sm:p-4">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground sm:text-sm">
-                                Total Pesanan
-                            </span>
-                            <Package className="size-4 text-muted-foreground" />
-                        </div>
-                        <p
-                            data-test="dashboard-orders-count"
-                            className="text-xl font-semibold tabular-nums sm:text-2xl"
-                        >
-                            {orders_count}
-                        </p>
-                    </Card>
-                    <Card className="gap-1 p-3 sm:p-4">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground sm:text-sm">
-                                Alamat Tersimpan
-                            </span>
-                            <MapPin className="size-4 text-muted-foreground" />
-                        </div>
-                        <p
-                            data-test="dashboard-addresses-count"
-                            className="text-xl font-semibold tabular-nums sm:text-2xl"
-                        >
-                            {addresses_count}
-                        </p>
-                    </Card>
-                </div>
-
-                {/* Quick links */}
-                <div className="flex flex-col gap-2">
-                    <h2 className="text-sm font-medium text-muted-foreground">
-                        Akses Cepat
-                    </h2>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                        <Button
-                            asChild
-                            variant="outline"
-                            className="h-auto justify-start gap-3 py-3"
-                            data-test="dashboard-quick-link-orders"
-                        >
-                            <Link href={ordersIndex.url()}>
-                                <Package className="size-5 shrink-0" />
-                                <span className="flex-1 text-left font-medium">
-                                    Pesanan Saya
-                                </span>
-                                <ArrowRight className="size-4 text-muted-foreground" />
-                            </Link>
-                        </Button>
-                        <Button
-                            asChild
-                            variant="outline"
-                            className="h-auto justify-start gap-3 py-3"
-                            data-test="dashboard-quick-link-addresses"
-                        >
-                            <Link href={addressesIndex.url()}>
-                                <MapPin className="size-5 shrink-0" />
-                                <span className="flex-1 text-left font-medium">
-                                    Alamat Saya
-                                </span>
-                                <ArrowRight className="size-4 text-muted-foreground" />
-                            </Link>
-                        </Button>
-                        <Button
-                            asChild
-                            variant="outline"
-                            className="h-auto justify-start gap-3 py-3"
-                        >
-                            <Link href={campaignsIndex.url()}>
-                                <ShoppingBag className="size-5 shrink-0" />
-                                <span className="flex-1 text-left font-medium">
-                                    Lanjut Belanja
-                                </span>
-                                <ArrowRight className="size-4 text-muted-foreground" />
-                            </Link>
-                        </Button>
-                    </div>
-                </div>
-
-                {/* Recent orders */}
-                <div className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-sm font-medium text-muted-foreground">
-                            Pesanan Terbaru
-                        </h2>
-                        <Button asChild size="sm" variant="ghost">
-                            <Link href={ordersIndex.url()}>Lihat semua</Link>
-                        </Button>
-                    </div>
-                    {recent_orders.length === 0 ? (
-                        <Card className="gap-1 p-6 text-center">
+                {/* Bento grid */}
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
+                    {/* Kartu ringkasan */}
+                    <Card className="flex flex-col justify-between gap-6 rounded-xl p-6 shadow-sm md:col-span-4 md:p-8">
+                        <div className="flex flex-col gap-2">
+                            <h2 className="text-xl font-semibold tracking-tight">
+                                Aktivitas Kamu
+                            </h2>
                             <p className="text-sm text-muted-foreground">
+                                Riwayat pre-order dan alamat pengiriman yang
+                                kamu simpan.
+                            </p>
+                        </div>
+                        <div className="flex items-end justify-between">
+                            <div>
+                                <span
+                                    data-test="dashboard-orders-count"
+                                    className="block text-4xl font-bold text-primary tabular-nums"
+                                >
+                                    {orders_count}
+                                </span>
+                                <span className="text-xs tracking-wider text-muted-foreground uppercase">
+                                    Total Pesanan
+                                </span>
+                            </div>
+                            <HeartHandshake className="size-10 text-primary/50" />
+                        </div>
+                        <div className="flex items-center justify-between border-t pt-4 text-sm">
+                            <span className="text-muted-foreground">
+                                Alamat tersimpan
+                            </span>
+                            <span
+                                data-test="dashboard-addresses-count"
+                                className="font-semibold tabular-nums"
+                            >
+                                {addresses_count}
+                            </span>
+                        </div>
+                    </Card>
+
+                    {/* Pesanan terbaru */}
+                    <Card className="gap-4 rounded-xl p-6 shadow-sm md:col-span-8 md:p-8">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-xl font-semibold tracking-tight">
+                                Pesanan Terbaru
+                            </h2>
+                            <Link
+                                href={ordersIndex.url()}
+                                className="text-sm font-medium text-primary hover:underline"
+                            >
+                                Lihat semua
+                            </Link>
+                        </div>
+
+                        {recent_orders.length === 0 ? (
+                            <p className="py-8 text-center text-sm text-muted-foreground">
                                 Belum ada pesanan. Yuk mulai belanja!
                             </p>
-                        </Card>
-                    ) : (
-                        <div className="flex flex-col gap-2">
-                            {recent_orders.map((order) => (
-                                <Link
-                                    key={order.id}
-                                    href={ordersShow.url({ order: order.id })}
-                                    data-test="dashboard-recent-order-row"
-                                    className="block focus-visible:outline-none"
-                                >
-                                    <Card className="gap-2 p-3 transition-shadow hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring sm:p-4">
-                                        <div className="flex flex-wrap items-center justify-between gap-2">
-                                            <div className="flex flex-col gap-0.5">
+                        ) : (
+                            <div className="flex flex-col divide-y">
+                                {recent_orders.map((order) => (
+                                    <Link
+                                        key={order.id}
+                                        href={ordersShow.url({
+                                            order: order.id,
+                                        })}
+                                        data-test="dashboard-recent-order-row"
+                                        className="-mx-2 flex items-center gap-4 rounded-lg p-3 transition-colors hover:bg-muted/40 focus-visible:outline-none"
+                                    >
+                                        <span className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-muted">
+                                            <Package className="size-6 text-muted-foreground" />
+                                        </span>
+                                        <div className="flex flex-1 flex-col gap-1">
+                                            <div className="flex flex-wrap items-center justify-between gap-2">
                                                 <span className="font-mono text-sm font-medium">
                                                     {order.order_number}
                                                 </span>
-                                                <span className="text-xs text-muted-foreground">
+                                                <Badge
+                                                    variant={
+                                                        order.status.startsWith(
+                                                            'dibatalkan',
+                                                        )
+                                                            ? 'destructive'
+                                                            : 'default'
+                                                    }
+                                                    className={
+                                                        STATUS_BADGE_CLASS[
+                                                            order.status
+                                                        ] ?? ''
+                                                    }
+                                                >
+                                                    {STATUS_LABELS[
+                                                        order.status
+                                                    ] ?? order.status}
+                                                </Badge>
+                                            </div>
+                                            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                                                <span>
                                                     {formatDate(
                                                         order.created_at,
                                                     )}
                                                 </span>
+                                                <span>
+                                                    {order.items_count} item ·{' '}
+                                                    <span className="font-medium tabular-nums">
+                                                        {formatPrice(
+                                                            order.total_amount,
+                                                        )}
+                                                    </span>
+                                                </span>
                                             </div>
-                                            <Badge
-                                                variant={
-                                                    order.status.startsWith(
-                                                        'dibatalkan',
-                                                    )
-                                                        ? 'destructive'
-                                                        : 'default'
-                                                }
-                                                className={
-                                                    STATUS_BADGE_CLASS[
-                                                        order.status
-                                                    ] ?? ''
-                                                }
-                                            >
-                                                {STATUS_LABELS[order.status] ??
-                                                    order.status}
-                                            </Badge>
                                         </div>
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">
-                                                {order.items_count} item
-                                            </span>
-                                            <span className="font-medium tabular-nums">
-                                                {formatPrice(
-                                                    order.total_amount,
-                                                )}
-                                            </span>
-                                        </div>
-                                    </Card>
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+                    </Card>
+
+                    {/* Akses cepat */}
+                    <div className="flex flex-col gap-3 md:col-span-12">
+                        <h2 className="text-xl font-semibold tracking-tight">
+                            Akses Cepat
+                        </h2>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                            <Button
+                                asChild
+                                variant="outline"
+                                className="h-auto justify-start gap-3 py-4"
+                                data-test="dashboard-quick-link-orders"
+                            >
+                                <Link href={ordersIndex.url()}>
+                                    <Package className="size-5 shrink-0" />
+                                    <span className="flex-1 text-left font-medium">
+                                        Pesanan Saya
+                                    </span>
+                                    <ArrowRight className="size-4 text-muted-foreground" />
                                 </Link>
-                            ))}
+                            </Button>
+                            <Button
+                                asChild
+                                variant="outline"
+                                className="h-auto justify-start gap-3 py-4"
+                                data-test="dashboard-quick-link-addresses"
+                            >
+                                <Link href={addressesIndex.url()}>
+                                    <MapPin className="size-5 shrink-0" />
+                                    <span className="flex-1 text-left font-medium">
+                                        Alamat Saya
+                                    </span>
+                                    <ArrowRight className="size-4 text-muted-foreground" />
+                                </Link>
+                            </Button>
+                            <Button
+                                asChild
+                                variant="outline"
+                                className="h-auto justify-start gap-3 py-4"
+                            >
+                                <Link href={campaignsIndex.url()}>
+                                    <ShoppingBag className="size-5 shrink-0" />
+                                    <span className="flex-1 text-left font-medium">
+                                        Lanjut Belanja
+                                    </span>
+                                    <ArrowRight className="size-4 text-muted-foreground" />
+                                </Link>
+                            </Button>
                         </div>
-                    )}
+                    </div>
                 </div>
             </div>
         </>

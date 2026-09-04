@@ -1,4 +1,5 @@
 import { Form, Head, router } from '@inertiajs/react';
+import { ArrowRight, Lock, Send, ShieldCheck } from 'lucide-react';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
 import type { ComponentRef } from 'react';
 import { useEffect, useRef, useState } from 'react';
@@ -73,12 +74,31 @@ export default function VerifyOtp({ phone, resendAfter = 60 }: Props) {
                 ref={formRef}
                 {...check.form()}
                 disableWhileProcessing
-                className="flex flex-col gap-6"
+                className="flex w-full flex-col"
             >
                 {({ processing, errors }) => (
-                    <>
-                        <input type="hidden" name="phone" value={phone} />
-                        <div className="grid gap-6">
+                    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+                        {/* Strip gradasi atas ala kartu Stitch */}
+                        <div className="h-1 bg-gradient-to-r from-primary to-primary/30" />
+
+                        <div className="flex flex-col gap-6 p-6 sm:p-8">
+                            <input type="hidden" name="phone" value={phone} />
+
+                            {/* Ikon verifikasi */}
+                            <div className="flex justify-center">
+                                <span className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                    <ShieldCheck className="size-7" />
+                                </span>
+                            </div>
+
+                            <p className="text-center text-sm text-muted-foreground">
+                                Kode dikirim ke WhatsApp{' '}
+                                <span className="font-medium text-foreground">
+                                    {phone}
+                                </span>
+                            </p>
+
+                            {/* Input OTP */}
                             <div className="flex flex-col items-center gap-3">
                                 <Label htmlFor="otp" className="sr-only">
                                     Kode verifikasi
@@ -113,49 +133,64 @@ export default function VerifyOtp({ phone, resendAfter = 60 }: Props) {
                                 />
                             </div>
 
-                            <p className="text-center text-sm text-muted-foreground">
-                                Kode dikirim ke WhatsApp{' '}
-                                <span className="font-medium text-foreground">
-                                    {phone}
-                                </span>
-                            </p>
-
+                            {/* Aksi utama */}
                             <Button
                                 type="submit"
-                                className="mt-2 w-full"
+                                className="h-12 w-full text-base"
                                 disabled={
                                     processing || code.length < OTP_LENGTH
                                 }
                                 data-test="verify-otp-button"
                             >
-                                {processing && <Spinner />}
-                                Verifikasi
+                                {processing ? (
+                                    <Spinner />
+                                ) : (
+                                    <>
+                                        Verifikasi
+                                        <ArrowRight className="size-4" />
+                                    </>
+                                )}
                             </Button>
 
-                            <div className="flex flex-col items-center gap-3 text-center text-sm text-muted-foreground">
-                                <p>
-                                    Tidak menerima kode?{' '}
+                            {/* Kirim ulang & ganti nomor */}
+                            <div className="flex flex-col gap-4 border-t pt-4">
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-muted-foreground">
+                                        Belum menerima kode?
+                                    </span>
                                     <button
                                         type="button"
                                         onClick={handleResend}
                                         disabled={resending || countdown > 0}
                                         data-test="resend-otp-button"
-                                        className="inline-flex items-center gap-1 font-medium text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! disabled:cursor-not-allowed disabled:opacity-50 dark:decoration-neutral-500"
+                                        className="inline-flex items-center gap-1.5 font-medium text-primary transition-colors hover:text-primary/80 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
-                                        {resending && <Spinner />}
+                                        {resending ? (
+                                            <Spinner />
+                                        ) : (
+                                            <Send className="size-4" />
+                                        )}
                                         {resending
-                                            ? 'Mengirim ulang...'
+                                            ? 'Mengirim...'
                                             : countdown > 0
-                                              ? `Kirim ulang dalam ${countdown}s`
+                                              ? `Kirim ulang ${countdown}s`
                                               : 'Kirim ulang kode'}
                                     </button>
-                                </p>
-                                <TextLink href={register()}>
-                                    Ganti nomor
-                                </TextLink>
+                                </div>
+                                <div className="text-center">
+                                    <TextLink href={register()}>
+                                        Ganti nomor
+                                    </TextLink>
+                                </div>
                             </div>
                         </div>
-                    </>
+
+                        {/* Catatan keamanan */}
+                        <div className="flex items-center justify-center gap-1.5 border-t bg-muted/50 px-6 py-3 text-xs text-muted-foreground">
+                            <Lock className="size-3.5" />
+                            Diamankan oleh Traz Cloth
+                        </div>
+                    </div>
                 )}
             </Form>
         </>
