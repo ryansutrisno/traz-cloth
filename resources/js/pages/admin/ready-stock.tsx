@@ -1,12 +1,20 @@
-import { Head, Link } from '@inertiajs/react';
+import { Form, Head, Link, router } from '@inertiajs/react';
 import { PackageOpen } from 'lucide-react';
+import { useState } from 'react';
+import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { dashboard as adminDashboard } from '@/routes/admin';
+import {
+    destroy as readyStockDestroy,
+    update as readyStockUpdate,
+} from '@/routes/admin/ready-stock';
 import { show as campaignShow } from '@/routes/campaigns';
 
 type ReadyStockRow = {
+    id: number;
     campaign_id: number;
     campaign_slug: string;
     campaign_title: string;
@@ -58,6 +66,18 @@ function decodeLabel(label: string): string {
 }
 
 export default function AdminReadyStock({ ready_stock, total_stock }: Props) {
+    const [editingId, setEditingId] = useState<number | null>(null);
+
+    const handleReset = (row: ReadyStockRow) => {
+        if (!window.confirm(`Reset stok ${row.campaign_title} ukuran ${row.size} menjadi 0?`)) {
+            return;
+        }
+
+        router.delete(readyStockDestroy.url({ campaignSize: row.id }), {
+            preserveScroll: true,
+        });
+    };
+
     return (
         <>
             <Head title="Ready Stock" />
@@ -100,13 +120,16 @@ export default function AdminReadyStock({ ready_stock, total_stock }: Props) {
                                     <th className="px-4 py-3 font-medium">
                                         Update Terakhir
                                     </th>
+                                    <th className="px-4 py-3 text-right font-medium">
+                                        Aksi
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y">
                                 {ready_stock.data.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={4}
+                                            colSpan={5}
                                             className="px-4 py-12 text-center text-muted-foreground"
                                         >
                                             Belum ada stok ready.
@@ -139,6 +162,92 @@ export default function AdminReadyStock({ ready_stock, total_stock }: Props) {
                                             </td>
                                             <td className="px-4 py-3 text-muted-foreground">
                                                 {formatDate(row.updated_at)}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                {editingId === row.id ? (
+                                                    <Form
+                                                        {...readyStockUpdate.form({
+                                                            campaignSize: row.id,
+                                                        })}
+                                                        onSuccess={() =>
+                                                            setEditingId(null)
+                                                        }
+                                                        className="flex items-start justify-end gap-2"
+                                                    >
+                                                        {({
+                                                            processing,
+                                                            errors,
+                                                        }) => (
+                                                            <>
+                                                                <div className="grid gap-1">
+                                                                    <Input
+                                                                        name="stock"
+                                                                        type="number"
+                                                                        min={0}
+                                                                        defaultValue={
+                                                                            row.stock
+                                                                        }
+                                                                        className="h-8 w-24"
+                                                                        aria-label={`Stok ${row.campaign_title} ukuran ${row.size}`}
+                                                                    />
+                                                                    {errors.stock && (
+                                                                        <InputError
+                                                                            message={
+                                                                                errors.stock
+                                                                            }
+                                                                        />
+                                                                    )}
+                                                                </div>
+                                                                <Button
+                                                                    type="submit"
+                                                                    size="sm"
+                                                                    disabled={
+                                                                        processing
+                                                                    }
+                                                                >
+                                                                    Simpan
+                                                                </Button>
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    onClick={() =>
+                                                                        setEditingId(
+                                                                            null,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    Batal
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                    </Form>
+                                                ) : (
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() =>
+                                                                setEditingId(
+                                                                    row.id,
+                                                                )
+                                                            }
+                                                        >
+                                                            Edit
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="destructive"
+                                                            onClick={() =>
+                                                                handleReset(row)
+                                                            }
+                                                        >
+                                                            Reset
+                                                        </Button>
+                                                    </div>
+                                                )}
                                             </td>
                                         </tr>
                                     ))

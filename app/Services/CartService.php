@@ -47,11 +47,11 @@ class CartService
         $normalizedSize = $this->normalizeSize($size);
         $campaign = Campaign::query()->with('sizes')->find($campaignId);
 
-        if ($campaign === null || $campaign->status !== CampaignStatus::Active) {
+        if ($campaign === null) {
             throw new DomainException('Kampanye tidak tersedia.');
         }
 
-        $this->findCampaignSize($campaign, $normalizedSize);
+        $this->assertCampaignPurchasable($campaign, $normalizedSize);
 
         if ($user === null) {
             $cart = $this->guestCart();
@@ -68,7 +68,7 @@ class CartService
             }
 
             $newQty = $currentQty + $qty;
-            $this->assertAvailableQuantity($campaign, $newQty);
+            $this->assertAvailableQuantity($campaign, $normalizedSize, $newQty);
             $index = $existingIndex ?? count($cart);
             $cart[$index] = [
                 'campaign_id' => $campaignId,
@@ -104,9 +104,8 @@ class CartService
                 throw new DomainException('Kampanye tidak tersedia.');
             }
 
-            $this->assertCampaignActive($campaign);
-            $this->findCampaignSize($campaign, $size);
-            $this->assertAvailableQuantity($campaign, $qty);
+            $this->assertCampaignPurchasable($campaign, $size);
+            $this->assertAvailableQuantity($campaign, $size, $qty);
             $cart[$cartItemId]['qty'] = $qty;
             session()->put(self::GUEST_CART_KEY, $cart);
 
@@ -118,9 +117,8 @@ class CartService
             ->findOrFail($cartItemId);
         $campaign = $cartItem->campaign()->with('sizes')->firstOrFail();
 
-        $this->assertCampaignActive($campaign);
-        $this->findCampaignSize($campaign, $cartItem->size);
-        $this->assertAvailableQuantity($campaign, $qty);
+        $this->assertCampaignPurchasable($campaign, $cartItem->size);
+        $this->assertAvailableQuantity($campaign, $cartItem->size, $qty);
         $cartItem->update(['qty' => $qty]);
 
         return $this->hydrateCartItem($cartItem->load(['campaign', 'campaign.sizes']));
@@ -188,18 +186,18 @@ class CartService
                     $campaign = Campaign::query()->with('sizes')->find((int) ($item['campaign_id'] ?? 0));
                     $size = $this->normalizeSize((string) ($item['size'] ?? ''));
 
-                    if ($campaign === null || $campaign->status !== CampaignStatus::Active) {
+                    if ($campaign === null) {
                         continue;
                     }
 
-                    $this->findCampaignSize($campaign, $size);
+                    $this->assertCampaignPurchasable($campaign, $size);
                     $attributes = [
                         'user_id' => $user->id,
                         'campaign_id' => $campaign->id,
                         'size' => $size->value,
                     ];
                     $currentQty = (int) (CartItem::query()->where($attributes)->value('qty') ?? 0);
-                    $availableQty = max(0, $this->quotaService->availableSlots($campaign) - $currentQty);
+                    $availableQty = max(0, $this->availableQuantityFor($campaign, $size) - $currentQty);
                     $guestQty = min((int) ($item['qty'] ?? 0), $availableQty);
 
                     if ($guestQty > 0) {
@@ -224,7 +222,7 @@ class CartService
         $currentQty = (int) (CartItem::query()->where($attributes)->value('qty') ?? 0);
         $newQty = $currentQty + $qty;
 
-        $this->assertAvailableQuantity($campaign, $newQty);
+        $this->assertAvailableQuantity($campaign, $size, $newQty);
 
         return CartItem::query()
             ->updateOrCreate($attributes, ['qty' => $newQty])
@@ -313,18 +311,31 @@ class CartService
         return $normalizedSize;
     }
 
-    private function assertCampaignActive(Campaign $campaign): void
+    private function assertCampaignPurchasable(Campaign $campaign, Size $size): void
     {
-        if ($campaign->status !== CampaignStatus::Active) {
+        $campaignSize = $this->findCampaignSize($campaign, $size);
+
+        if ($campaign->status === CampaignStatus::Active) {
+            return;
+        }
+
+        if ($campaign->status !== CampaignStatus::SoldOut || $campaignSize->stock < 1) {
             throw new DomainException('Kampanye tidak tersedia.');
         }
     }
 
-    private function assertAvailableQuantity(Campaign $campaign, int $qty): void
+    private function assertAvailableQuantity(Campaign $campaign, Size $size, int $qty): void
     {
-        if ($this->quotaService->availableSlots($campaign) < $qty) {
-            throw new DomainException('Kuota kampanye tidak mencukupi.');
+        if ($this->availableQuantityFor($campaign, $size) < $qty) {
+            throw new DomainException('Stok dan kuota kampanye tidak mencukupi.');
         }
+    }
+
+    private function availableQuantityFor(Campaign $campaign, Size $size): int
+    {
+        $campaignSize = $this->findCampaignSize($campaign, $size);
+
+        return max(0, $campaignSize->stock) + $this->quotaService->availableSlots($campaign);
     }
 
     private function findCampaignSize(Campaign $campaign, Size $size, bool $requireEnabled = true): CampaignSize

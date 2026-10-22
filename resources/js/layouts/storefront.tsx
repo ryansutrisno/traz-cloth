@@ -7,7 +7,17 @@ import { Input } from '@/components/ui/input';
 import { index as campaignsIndex } from '@/routes/campaigns';
 import { index as cartIndex } from '@/routes/cart';
 import { index as ordersIndex } from '@/routes/orders';
-import { contact, dashboard, home, login, privacyPolicy, terms } from '@/routes';
+import {
+    about,
+    contact,
+    dashboard,
+    faq,
+    home,
+    login,
+    privacyPolicy,
+    shippingPolicy,
+    terms,
+} from '@/routes';
 import { subscribe as newsletterSubscribe } from '@/routes/newsletter';
 
 type Props = {
@@ -223,6 +233,30 @@ export default function StorefrontLayout({ title, children }: Props) {
                                             Hubungi Kami
                                         </Link>
                                     </li>
+                                    <li>
+                                        <Link
+                                            href={faq()}
+                                            className="transition-colors hover:text-foreground"
+                                        >
+                                            FAQ
+                                        </Link>
+                                    </li>
+                                    <li>
+                                        <Link
+                                            href={about()}
+                                            className="transition-colors hover:text-foreground"
+                                        >
+                                            Tentang Kami
+                                        </Link>
+                                    </li>
+                                    <li>
+                                        <Link
+                                            href={shippingPolicy()}
+                                            className="transition-colors hover:text-foreground"
+                                        >
+                                            Kebijakan Pengiriman
+                                        </Link>
+                                    </li>
                                 </ul>
                             </div>
 
@@ -241,8 +275,8 @@ export default function StorefrontLayout({ title, children }: Props) {
 
                         {/* Copyright */}
                         <div className="mt-8 border-t pt-4 text-center text-xs text-muted-foreground">
-                            &copy; {new Date().getFullYear()} {appName}.
-                            Made with{' '}
+                            &copy; {new Date().getFullYear()} {appName}. Made
+                            with{' '}
                             <Heart
                                 aria-hidden="true"
                                 className="mx-0.5 inline h-3 w-3 fill-red-500 text-red-500"

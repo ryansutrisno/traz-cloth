@@ -4,6 +4,17 @@ import { useRef, useState } from 'react';
 import CampaignMockup from '@/components/campaign-mockup';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    ToggleGroup,
+    ToggleGroupItem,
+} from '@/components/ui/toggle-group';
 import { index, show } from '@/routes/campaigns';
 
 type CampaignSummary = {
@@ -26,7 +37,7 @@ type PaginationLink = {
 
 type Props = {
     campaigns: { data: CampaignSummary[] };
-    filters: { q: string };
+    filters: { q: string; size: string; status: string };
     pagination: {
         current_page: number;
         last_page: number;
@@ -43,6 +54,8 @@ const rupiah = new Intl.NumberFormat('id-ID', {
     currency: 'IDR',
     maximumFractionDigits: 0,
 });
+
+const SIZE_OPTIONS = ['S', 'M', 'L', 'XL', 'XXL'] as const;
 
 function formatPrice(value: number | null): string {
     if (value === null) {
@@ -70,15 +83,36 @@ export default function CampaignsIndex({
     pagination,
 }: Props) {
     const [q, setQ] = useState(filters.q ?? '');
+    const [size, setSize] = useState(filters.size ?? '');
+    const [status, setStatus] = useState(filters.status ?? '');
     const gridRef = useRef<HTMLDivElement>(null);
+
+    const updateFilters = (nextSize: string, nextStatus: string) => {
+        router.get(
+            index.url(),
+            { q, size: nextSize, status: nextStatus },
+            { preserveState: true, preserveScroll: true, replace: true },
+        );
+    };
 
     const handleSearch = (value: string) => {
         setQ(value);
         router.get(
             index.url(),
-            { q: value },
+            { q: value, size, status },
             { preserveState: true, preserveScroll: true, replace: true },
         );
+    };
+
+    const handleSizeChange = (value: string) => {
+        setSize(value);
+        updateFilters(value, status);
+    };
+
+    const handleStatusChange = (value: string) => {
+        const nextStatus = value === '' || value === 'all' ? '' : value;
+        setStatus(nextStatus);
+        updateFilters(size, nextStatus);
     };
 
     const scrollToGrid = () => {
@@ -128,23 +162,60 @@ export default function CampaignsIndex({
                     </div>
                 </section>
 
-                {/* Bar pencarian */}
-                <div className="mb-8 flex flex-col items-center justify-between gap-4 border-b pb-4 md:flex-row">
-                    <div className="relative w-full md:max-w-sm">
-                        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                            data-test="search-campaigns-input"
-                            type="search"
-                            value={q}
-                            onChange={(e) => handleSearch(e.target.value)}
-                            placeholder="Cari desain..."
-                            className="h-10 pl-9"
-                            aria-label="Cari desain"
-                        />
+                {/* Bar pencarian dan filter */}
+                <div className="mb-8 flex flex-col gap-4 border-b pb-4">
+                    <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
+                        <div className="relative w-full md:max-w-sm">
+                            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                                data-test="search-campaigns-input"
+                                type="search"
+                                value={q}
+                                onChange={(e) => handleSearch(e.target.value)}
+                                placeholder="Cari desain..."
+                                className="h-10 pl-9"
+                                aria-label="Cari desain"
+                            />
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                            {pagination.total} desain tersedia
+                        </span>
                     </div>
-                    <span className="text-sm text-muted-foreground">
-                        {pagination.total} desain tersedia
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Select
+                            value={size || 'all'}
+                            onValueChange={(value) =>
+                                handleSizeChange(value === 'all' ? '' : value)
+                            }
+                        >
+                            <SelectTrigger className="w-[150px]">
+                                <SelectValue placeholder="Ukuran" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">
+                                    Semua ukuran
+                                </SelectItem>
+                                {SIZE_OPTIONS.map((option) => (
+                                    <SelectItem key={option} value={option}>
+                                        Ukuran {option}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <ToggleGroup
+                            type="single"
+                            variant="outline"
+                            value={status || 'all'}
+                            onValueChange={handleStatusChange}
+                            aria-label="Filter status kampanye"
+                        >
+                            <ToggleGroupItem value="all">Semua</ToggleGroupItem>
+                            <ToggleGroupItem value="ready">Ready</ToggleGroupItem>
+                            <ToggleGroupItem value="sold_out">
+                                Sold Out
+                            </ToggleGroupItem>
+                        </ToggleGroup>
+                    </div>
                 </div>
 
                 {/* Grid kampanye */}

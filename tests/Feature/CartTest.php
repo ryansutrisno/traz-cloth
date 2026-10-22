@@ -159,6 +159,51 @@ class CartTest extends TestCase
             ->assertSessionHasErrors('qty');
     }
 
+    public function test_user_can_add_ready_stock_from_sold_out_campaign(): void
+    {
+        $user = User::factory()->create();
+        $campaign = Campaign::factory()->create([
+            'status' => CampaignStatus::SoldOut,
+            'quota' => 0,
+            'sold_count' => 0,
+        ]);
+        CampaignSize::factory()->for($campaign)->s()->create([
+            'enabled' => true,
+            'stock' => 2,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('cart.add'), [
+                'campaign_id' => $campaign->id,
+                'size' => Size::S->value,
+                'qty' => 1,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('cart_items', [
+            'user_id' => $user->id,
+            'campaign_id' => $campaign->id,
+            'size' => Size::S->value,
+            'qty' => 1,
+        ]);
+    }
+
+    public function test_user_cannot_add_quantity_over_ready_stock_and_quota(): void
+    {
+        $user = User::factory()->create();
+        $campaign = $this->campaignWithSize(quota: 2);
+        $campaign->sizes()->where('size', Size::S->value)->update(['stock' => 1]);
+
+        $this->actingAs($user)
+            ->from(route('cart.index'))
+            ->post(route('cart.add'), [
+                'campaign_id' => $campaign->id,
+                'size' => Size::S->value,
+                'qty' => 4,
+            ])
+            ->assertSessionHasErrors('qty');
+    }
+
     public function test_user_can_update_cart_quantity_and_invalid_quantity_is_rejected(): void
     {
         $user = User::factory()->create();

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Storefront;
 
 use App\Enums\CampaignStatus;
+use App\Enums\Size;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\CampaignSize;
@@ -11,6 +12,7 @@ use App\Services\QuotaService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -23,15 +25,45 @@ class CampaignController extends Controller
 
     public function index(Request $request): Response
     {
+        $request->validate([
+            'size' => ['nullable', Rule::enum(Size::class)],
+            'status' => ['nullable', Rule::in(['ready', 'sold_out'])],
+        ]);
+
         $search = $request->string('q')->trim()->toString();
+        $size = $request->string('size')->trim()->toString();
+        $status = $request->string('status')->trim()->toString();
         $campaigns = Campaign::query()
-            ->where('status', CampaignStatus::Active->value)
+            ->whereIn('status', [CampaignStatus::Active->value, CampaignStatus::SoldOut->value])
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(function (Builder $query) use ($search): void {
                     $query
                         ->where('title', 'like', '%'.$search.'%')
                         ->orWhere('description', 'like', '%'.$search.'%');
                 });
+            })
+            ->when($size !== '', function (Builder $query) use ($size): void {
+                $query->whereHas('sizes', function (Builder $query) use ($size): void {
+                    $query
+                        ->where('size', $size)
+                        ->where('enabled', true);
+                });
+            })
+            ->when($status === 'ready', function (Builder $query): void {
+                $query->where(function (Builder $query): void {
+                    $query
+                        ->where(function (Builder $query): void {
+                            $query
+                                ->where('status', CampaignStatus::Active->value)
+                                ->whereColumn('sold_count', '<', 'quota');
+                        })
+                        ->orWhereHas('sizes', fn (Builder $query): Builder => $query->where('stock', '>', 0));
+                });
+            })
+            ->when($status === 'sold_out', function (Builder $query): void {
+                $query
+                    ->whereColumn('sold_count', '>=', 'quota')
+                    ->whereDoesntHave('sizes', fn (Builder $query): Builder => $query->where('stock', '>', 0));
             })
             ->with(['sizes' => fn (HasMany $query): HasMany => $query->where('enabled', true)])
             ->paginate(12)
@@ -48,6 +80,8 @@ class CampaignController extends Controller
             ],
             'filters' => [
                 'q' => $search,
+                'size' => $size,
+                'status' => $status,
             ],
             'pagination' => [
                 'current_page' => $campaigns->currentPage(),

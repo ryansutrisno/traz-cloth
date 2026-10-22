@@ -149,6 +149,34 @@ class CheckoutTest extends TestCase
         $this->assertSame(PaymentStatus::Sukses, $order->payments()->firstOrFail()->payment_status);
     }
 
+    public function test_ready_stock_checkout_reduces_stock_without_using_campaign_quota(): void
+    {
+        $user = User::factory()->create();
+        [$campaign] = $this->cartFor($user, 2, 0, 2);
+        $order = $this->createOrder($user, PaymentMode::Lunas);
+
+        $this->actingAs($user)
+            ->post(route('checkout.dev.pay', $order))
+            ->assertRedirect(route('checkout.success', $order));
+
+        $this->assertSame(0, $campaign->refresh()->sold_count);
+        $this->assertSame(0, (int) $campaign->sizes()->where('size', Size::S->value)->value('stock'));
+    }
+
+    public function test_mixed_ready_stock_checkout_uses_quota_for_remaining_items(): void
+    {
+        $user = User::factory()->create();
+        [$campaign] = $this->cartFor($user, 3, 2, 1);
+        $order = $this->createOrder($user, PaymentMode::Lunas);
+
+        $this->actingAs($user)
+            ->post(route('checkout.dev.pay', $order))
+            ->assertRedirect(route('checkout.success', $order));
+
+        $this->assertSame(2, $campaign->refresh()->sold_count);
+        $this->assertSame(0, (int) $campaign->sizes()->where('size', Size::S->value)->value('stock'));
+    }
+
     public function test_dev_route_is_unavailable_when_midtrans_is_configured(): void
     {
         $user = User::factory()->create();
@@ -239,7 +267,7 @@ class CheckoutTest extends TestCase
     /**
      * @return array{0: Campaign, 1: CartItem}
      */
-    private function cartFor(User $user, int $qty, int $quota = 20): array
+    private function cartFor(User $user, int $qty, int $quota = 20, int $stock = 0): array
     {
         $campaign = Campaign::factory()->active()->create([
             'base_price' => 100000,
@@ -249,6 +277,7 @@ class CheckoutTest extends TestCase
         CampaignSize::factory()->for($campaign)->s()->create([
             'enabled' => true,
             'price_override' => null,
+            'stock' => $stock,
         ]);
         $cartItem = CartItem::factory()->create([
             'user_id' => $user->id,

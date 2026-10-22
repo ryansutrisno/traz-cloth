@@ -20,10 +20,14 @@ const storefrontNames = [
     'orders/index',
     'orders/show',
     'addresses/index',
+    'account/index',
     'dashboard',
     'terms',
     'privacy',
     'contact',
+    'faq',
+    'about',
+    'shipping-policy',
 ];
 
 createInertiaApp({

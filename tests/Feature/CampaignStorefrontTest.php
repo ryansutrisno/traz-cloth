@@ -72,6 +72,45 @@ class CampaignStorefrontTest extends TestCase
         );
     }
 
+    public function test_catalog_can_filter_by_size(): void
+    {
+        $response = $this->getInertia(route('campaigns.index', ['size' => Size::S->value]));
+
+        $response->assertInertia(fn (Assert $page) => $page
+            ->has('campaigns.data', 1)
+            ->where('campaigns.data.0.slug', $this->campaign->slug)
+            ->where('filters.size', Size::S->value),
+        );
+    }
+
+    public function test_catalog_can_filter_ready_and_sold_out_campaigns(): void
+    {
+        $soldOutCampaign = Campaign::factory()->active()->create([
+            'title' => 'Kampanye Sold Out',
+            'quota' => 1,
+            'sold_count' => 1,
+        ]);
+        CampaignSize::factory()->for($soldOutCampaign)->s()->create(['stock' => 0]);
+
+        $readyResponse = $this->getInertia(route('campaigns.index', ['status' => 'ready']));
+        $readyResponse->assertInertia(fn (Assert $page) => $page
+            ->where('filters.status', 'ready')
+            ->where(
+                'campaigns.data',
+                fn ($campaigns): bool => collect($campaigns)
+                    ->pluck('slug')
+                    ->doesntContain($soldOutCampaign->slug),
+            ),
+        );
+
+        $soldOutResponse = $this->getInertia(route('campaigns.index', ['status' => 'sold_out']));
+        $soldOutResponse->assertInertia(fn (Assert $page) => $page
+            ->has('campaigns.data', 1)
+            ->where('campaigns.data.0.slug', $soldOutCampaign->slug)
+            ->where('filters.status', 'sold_out'),
+        );
+    }
+
     public function test_campaign_detail_shows_sizes_with_effective_prices(): void
     {
         $response = $this->getInertia(route('campaigns.show', $this->campaign->slug));
