@@ -223,7 +223,8 @@ export default function AdminCampaignsEdit({
                                                 )
                                             }
                                         />
-                                        {(imagePreview || campaign.image_url) && (
+                                        {(imagePreview ||
+                                            campaign.image_url) && (
                                             <img
                                                 src={
                                                     imagePreview ??

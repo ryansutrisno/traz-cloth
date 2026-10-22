@@ -1,6 +1,12 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowRight, CheckCircle2, MapPin, Package, ShieldCheck } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import {
+    ArrowRight,
+    CheckCircle2,
+    MapPin,
+    Package,
+    ShieldCheck,
+} from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -69,13 +75,6 @@ export default function AccountIndex({
     const phoneForm = useForm({ phone: '' });
     const otpForm = useForm({ otp: '' });
 
-    useEffect(() => {
-        if (phone_verification.pending) {
-            setPhoneStep('code');
-            setPhoneDialogOpen(true);
-        }
-    }, [phone_verification.pending]);
-
     const handlePhoneSubmit = (event: React.FormEvent) => {
         event.preventDefault();
         phoneForm.post(update.url(), {
@@ -85,7 +84,8 @@ export default function AccountIndex({
                 setPhoneDialogOpen(true);
                 toast.success('Kode OTP sudah dikirim ke nomor baru.');
             },
-            onError: () => toast.error('Nomor WhatsApp belum dapat diverifikasi.'),
+            onError: () =>
+                toast.error('Nomor WhatsApp belum dapat diverifikasi.'),
         });
     };
 
@@ -100,7 +100,8 @@ export default function AccountIndex({
                 otpForm.reset();
                 toast.success('Nomor WhatsApp berhasil diverifikasi.');
             },
-            onError: () => toast.error('Kode OTP salah atau sudah kedaluwarsa.'),
+            onError: () =>
+                toast.error('Kode OTP salah atau sudah kedaluwarsa.'),
         });
     };
 
@@ -123,28 +124,36 @@ export default function AccountIndex({
                         <span className="text-3xl font-bold tabular-nums">
                             {statistics.total}
                         </span>
-                        <span className="text-sm text-muted-foreground">Total Pesanan</span>
+                        <span className="text-sm text-muted-foreground">
+                            Total Pesanan
+                        </span>
                     </Card>
                     <Card className="gap-2 p-5">
                         <ShieldCheck className="size-5 text-amber-500" />
                         <span className="text-3xl font-bold tabular-nums">
                             {statistics.in_progress}
                         </span>
-                        <span className="text-sm text-muted-foreground">Sedang Berjalan</span>
+                        <span className="text-sm text-muted-foreground">
+                            Sedang Berjalan
+                        </span>
                     </Card>
                     <Card className="gap-2 p-5">
                         <CheckCircle2 className="size-5 text-green-600" />
                         <span className="text-3xl font-bold tabular-nums">
                             {statistics.completed}
                         </span>
-                        <span className="text-sm text-muted-foreground">Pesanan Selesai</span>
+                        <span className="text-sm text-muted-foreground">
+                            Pesanan Selesai
+                        </span>
                     </Card>
                 </div>
 
                 <div className="grid gap-6 lg:grid-cols-2">
                     <Card className="gap-5 p-5 md:p-6">
                         <div>
-                            <h2 className="text-lg font-semibold">Informasi Pribadi</h2>
+                            <h2 className="text-lg font-semibold">
+                                Informasi Pribadi
+                            </h2>
                             <p className="text-sm text-muted-foreground">
                                 Data akun yang terhubung dengan pesanan kamu.
                             </p>
@@ -159,7 +168,9 @@ export default function AccountIndex({
                                 <dd className="font-medium">{user.email}</dd>
                             </div>
                             <div className="flex flex-col gap-1">
-                                <dt className="text-muted-foreground">WhatsApp</dt>
+                                <dt className="text-muted-foreground">
+                                    WhatsApp
+                                </dt>
                                 <dd className="flex flex-wrap items-center gap-2 font-medium">
                                     {user.phone ?? 'Belum ditambahkan'}
                                     {user.phone_verified && (
@@ -183,9 +194,12 @@ export default function AccountIndex({
                     <Card className="gap-5 p-5 md:p-6">
                         <div className="flex items-start justify-between gap-3">
                             <div>
-                                <h2 className="text-lg font-semibold">Alamat Utama</h2>
+                                <h2 className="text-lg font-semibold">
+                                    Alamat Utama
+                                </h2>
                                 <p className="text-sm text-muted-foreground">
-                                    Alamat yang digunakan sebagai tujuan pengiriman.
+                                    Alamat yang digunakan sebagai tujuan
+                                    pengiriman.
                                 </p>
                             </div>
                             <MapPin className="size-5 text-primary" />
@@ -193,11 +207,14 @@ export default function AccountIndex({
                         {default_address ? (
                             <div className="rounded-lg bg-muted/50 p-4 text-sm">
                                 <p className="font-medium">
-                                    {default_address.label} · {default_address.recipient_name}
+                                    {default_address.label} ·{' '}
+                                    {default_address.recipient_name}
                                 </p>
                                 <p className="mt-1 text-muted-foreground">
-                                    {default_address.full_address}, {default_address.city},{' '}
-                                    {default_address.province} {default_address.postal_code}
+                                    {default_address.full_address},{' '}
+                                    {default_address.city},{' '}
+                                    {default_address.province}{' '}
+                                    {default_address.postal_code}
                                 </p>
                                 <p className="mt-1 text-muted-foreground">
                                     {default_address.phone}
@@ -209,7 +226,9 @@ export default function AccountIndex({
                             </p>
                         )}
                         <Button asChild variant="outline" className="w-fit">
-                            <Link href={addressesIndex.url()}>Kelola Alamat</Link>
+                            <Link href={addressesIndex.url()}>
+                                Kelola Alamat
+                            </Link>
                         </Button>
                     </Card>
                 </div>
@@ -217,24 +236,42 @@ export default function AccountIndex({
                 <section className="flex flex-col gap-3">
                     <h2 className="text-lg font-semibold">Akses Cepat</h2>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        <Button asChild variant="outline" className="h-auto justify-between py-4">
+                        <Button
+                            asChild
+                            variant="outline"
+                            className="h-auto justify-between py-4"
+                        >
                             <Link href={ordersIndex.url()}>
                                 Pesanan Saya <ArrowRight className="size-4" />
                             </Link>
                         </Button>
-                        <Button asChild variant="outline" className="h-auto justify-between py-4">
+                        <Button
+                            asChild
+                            variant="outline"
+                            className="h-auto justify-between py-4"
+                        >
                             <Link href={addressesIndex.url()}>
                                 Alamat <ArrowRight className="size-4" />
                             </Link>
                         </Button>
-                        <Button asChild variant="outline" className="h-auto justify-between py-4">
+                        <Button
+                            asChild
+                            variant="outline"
+                            className="h-auto justify-between py-4"
+                        >
                             <Link href={profileEdit.url()}>
-                                Pengaturan Profil <ArrowRight className="size-4" />
+                                Pengaturan Profil{' '}
+                                <ArrowRight className="size-4" />
                             </Link>
                         </Button>
-                        <Button asChild variant="outline" className="h-auto justify-between py-4">
+                        <Button
+                            asChild
+                            variant="outline"
+                            className="h-auto justify-between py-4"
+                        >
                             <Link href={securityEdit.url()}>
-                                Password &amp; Keamanan <ArrowRight className="size-4" />
+                                Password &amp; Keamanan{' '}
+                                <ArrowRight className="size-4" />
                             </Link>
                         </Button>
                     </div>
@@ -257,15 +294,23 @@ export default function AccountIndex({
                     </DialogHeader>
 
                     {phoneStep === 'phone' ? (
-                        <form onSubmit={handlePhoneSubmit} className="grid gap-4">
+                        <form
+                            onSubmit={handlePhoneSubmit}
+                            className="grid gap-4"
+                        >
                             <div className="grid gap-2">
-                                <Label htmlFor="account-phone">Nomor WhatsApp baru</Label>
+                                <Label htmlFor="account-phone">
+                                    Nomor WhatsApp baru
+                                </Label>
                                 <Input
                                     id="account-phone"
                                     type="tel"
                                     value={phoneForm.data.phone}
                                     onChange={(event) =>
-                                        phoneForm.setData('phone', event.target.value)
+                                        phoneForm.setData(
+                                            'phone',
+                                            event.target.value,
+                                        )
                                     }
                                     placeholder="0812xxxxxxx"
                                     required
@@ -273,8 +318,13 @@ export default function AccountIndex({
                                 <InputError message={phoneForm.errors.phone} />
                             </div>
                             <DialogFooter>
-                                <Button type="submit" disabled={phoneForm.processing}>
-                                    {phoneForm.processing ? 'Mengirim...' : 'Kirim Kode OTP'}
+                                <Button
+                                    type="submit"
+                                    disabled={phoneForm.processing}
+                                >
+                                    {phoneForm.processing
+                                        ? 'Mengirim...'
+                                        : 'Kirim Kode OTP'}
                                 </Button>
                             </DialogFooter>
                         </form>
@@ -288,7 +338,10 @@ export default function AccountIndex({
                                     maxLength={6}
                                     value={otpForm.data.otp}
                                     onChange={(event) =>
-                                        otpForm.setData('otp', event.target.value)
+                                        otpForm.setData(
+                                            'otp',
+                                            event.target.value,
+                                        )
                                     }
                                     placeholder="000000"
                                     required
@@ -296,13 +349,20 @@ export default function AccountIndex({
                                 <InputError message={otpForm.errors.otp} />
                                 {phone_verification.resend_cooldown > 0 && (
                                     <p className="text-xs text-muted-foreground">
-                                        Kode baru dapat dikirim lagi dalam {phone_verification.resend_cooldown} detik.
+                                        Kode baru dapat dikirim lagi dalam{' '}
+                                        {phone_verification.resend_cooldown}{' '}
+                                        detik.
                                     </p>
                                 )}
                             </div>
                             <DialogFooter>
-                                <Button type="submit" disabled={otpForm.processing}>
-                                    {otpForm.processing ? 'Memverifikasi...' : 'Verifikasi Nomor'}
+                                <Button
+                                    type="submit"
+                                    disabled={otpForm.processing}
+                                >
+                                    {otpForm.processing
+                                        ? 'Memverifikasi...'
+                                        : 'Verifikasi Nomor'}
                                 </Button>
                             </DialogFooter>
                         </form>

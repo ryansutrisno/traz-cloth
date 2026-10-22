@@ -69,7 +69,11 @@ export default function AdminReadyStock({ ready_stock, total_stock }: Props) {
     const [editingId, setEditingId] = useState<number | null>(null);
 
     const handleReset = (row: ReadyStockRow) => {
-        if (!window.confirm(`Reset stok ${row.campaign_title} ukuran ${row.size} menjadi 0?`)) {
+        if (
+            !window.confirm(
+                `Reset stok ${row.campaign_title} ukuran ${row.size} menjadi 0?`,
+            )
+        ) {
             return;
         }
 
@@ -166,9 +170,12 @@ export default function AdminReadyStock({ ready_stock, total_stock }: Props) {
                                             <td className="px-4 py-3">
                                                 {editingId === row.id ? (
                                                     <Form
-                                                        {...readyStockUpdate.form({
-                                                            campaignSize: row.id,
-                                                        })}
+                                                        {...readyStockUpdate.form(
+                                                            {
+                                                                campaignSize:
+                                                                    row.id,
+                                                            },
+                                                        )}
                                                         onSuccess={() =>
                                                             setEditingId(null)
                                                         }

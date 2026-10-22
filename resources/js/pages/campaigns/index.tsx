@@ -11,10 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import {
-    ToggleGroup,
-    ToggleGroupItem,
-} from '@/components/ui/toggle-group';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { index, show } from '@/routes/campaigns';
 
 type CampaignSummary = {
@@ -210,7 +207,9 @@ export default function CampaignsIndex({
                             aria-label="Filter status kampanye"
                         >
                             <ToggleGroupItem value="all">Semua</ToggleGroupItem>
-                            <ToggleGroupItem value="ready">Ready</ToggleGroupItem>
+                            <ToggleGroupItem value="ready">
+                                Ready
+                            </ToggleGroupItem>
                             <ToggleGroupItem value="sold_out">
                                 Sold Out
                             </ToggleGroupItem>
