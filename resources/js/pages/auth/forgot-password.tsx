@@ -56,7 +56,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
                                     </div>
 
                                     <Button
-                                        className="h-12 w-full text-base"
+                                        className="mt-5 h-12 w-full text-base"
                                         disabled={processing}
                                         data-test="email-password-reset-link-button"
                                     >
