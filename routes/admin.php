@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\Auth\AdminLoginController;
 use App\Http\Controllers\Admin\CampaignController;
 use App\Http\Controllers\Admin\CommunicationController;
+use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ReadyStockController;
 use App\Http\Controllers\Admin\ReportController;
@@ -17,6 +18,7 @@ Route::prefix('admin')->name('admin.')->middleware('web')->group(function (): vo
     Route::middleware(['admin', 'auth:admin'])->group(function (): void {
         Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
         Route::resource('campaigns', CampaignController::class)->except('show');
+        Route::resource('coupons', CouponController::class)->except('show');
 
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');

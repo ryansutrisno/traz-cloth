@@ -18,6 +18,9 @@ use Illuminate\Support\Carbon;
  * @property string $order_number
  * @property OrderStatus $status
  * @property PaymentMode $payment_mode
+ * @property int|null $coupon_id
+ * @property string|null $coupon_code
+ * @property string $discount_amount
  * @property string $subtotal
  * @property string $total_amount
  * @property string|null $dp_amount
@@ -32,7 +35,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $shipped_at
  * @property Carbon|null $delivered_at
  */
-#[Fillable(['user_id', 'order_number', 'status', 'payment_mode', 'subtotal', 'total_amount', 'dp_amount', 'payment_due_at', 'buyer_notes', 'address_id', 'shipping_cost', 'courier_code', 'courier_service', 'resi_number', 'biteship_order_id', 'shipped_at', 'delivered_at'])]
+#[Fillable(['user_id', 'order_number', 'status', 'payment_mode', 'coupon_id', 'coupon_code', 'discount_amount', 'subtotal', 'total_amount', 'dp_amount', 'payment_due_at', 'buyer_notes', 'address_id', 'shipping_cost', 'courier_code', 'courier_service', 'resi_number', 'biteship_order_id', 'shipped_at', 'delivered_at'])]
 class Order extends Model
 {
     /** @use HasFactory<OrderFactory> */
@@ -52,6 +55,11 @@ class Order extends Model
     public function address(): BelongsTo
     {
         return $this->belongsTo(Address::class);
+    }
+
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class);
     }
 
     /**
@@ -88,6 +96,7 @@ class Order extends Model
         return [
             'status' => OrderStatus::class,
             'payment_mode' => PaymentMode::class,
+            'discount_amount' => 'decimal:2',
             'subtotal' => 'decimal:2',
             'total_amount' => 'decimal:2',
             'dp_amount' => 'decimal:2',

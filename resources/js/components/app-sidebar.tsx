@@ -10,6 +10,7 @@ import {
     PackageOpen,
     PieChart,
     Shirt,
+    TicketPercent,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
@@ -38,6 +39,7 @@ import {
     logout as adminLogout,
 } from '@/routes/admin';
 import { index as adminCampaignsIndex } from '@/routes/admin/campaigns';
+import { index as adminCouponsIndex } from '@/routes/admin/coupons';
 import { index as adminOrdersIndex } from '@/routes/admin/orders';
 import { index as komunikasiIndex } from '@/routes/admin/komunikasi';
 import { index as laporanIndex } from '@/routes/admin/laporan';
@@ -63,6 +65,7 @@ function adminNavItems(role: string | undefined): NavItem[] {
     const items: NavItem[] = [
         { title: 'Dashboard', href: adminDashboard(), icon: LayoutGrid },
         { title: 'Kampanye', href: adminCampaignsIndex(), icon: Shirt },
+        { title: 'Kupon', href: adminCouponsIndex(), icon: TicketPercent },
         { title: 'Pesanan', href: adminOrdersIndex(), icon: Package },
         {
             title: 'Komunikasi',

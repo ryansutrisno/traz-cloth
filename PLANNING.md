@@ -496,11 +496,26 @@ traz-cloth/
 ## 11. Item Lanjutan (Backlog — Belum Diputuskan)
 
 - Pengiriman otomatis label/PDF via Biteship (opsional).
-- Kupon/diskon & promo.
 - Multi foto desain (galeri per kampanye).
 - Notifikasi email tambahan (selain WA).
 - Backup & restore otomatis PostgreSQL (jadwal Dokploy).
 - Pemantauan (monitoring) error via log/sentry.
+
+---
+
+## 12. Kupon & Diskon (Diputuskan 2026-10-23)
+
+| # | Keputusan |
+|---|-----------|
+| K1 | Kupon bersifat **global** (tidak terikat kampanye); satu kode per order |
+| K2 | Tipe diskon: **persentase** (dengan batas maksimal opsional) atau **nominal tetap** |
+| K3 | Diskon **hanya mengurangi subtotal produk**, tidak mengurangi ongkir |
+| K4 | DP 50% dihitung dari **total setelah diskon + ongkir** |
+| K5 | Batasan kupon: minimal belanja, masa berlaku, kuota total pemakaian, limit per user (default 1×) |
+| K6 | Kuota kupon dipakai saat order dibuat (atomik, `lockForUpdate`) dan dikembalikan saat order dibatalkan |
+| K7 | Kupon diinput di halaman checkout; validasi ulang dilakukan server-side saat order dibuat |
+| K8 | Order menyimpan snapshot `coupon_id`, `coupon_code`, `discount_amount` untuk audit |
+| K9 | Kupon yang sudah pernah dipakai tidak bisa dihapus admin, hanya dinonaktifkan |
 
 ---
 

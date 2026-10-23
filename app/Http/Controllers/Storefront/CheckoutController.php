@@ -14,6 +14,7 @@ use App\Models\Payment;
 use App\Models\User;
 use App\Services\BiteshipService;
 use App\Services\CartService;
+use App\Services\CouponService;
 use App\Services\MidtransService;
 use App\Services\OrderService;
 use DomainException;
@@ -28,6 +29,7 @@ class CheckoutController extends Controller
 {
     public function __construct(
         private CartService $cartService,
+        private CouponService $couponService,
         private OrderService $orderService,
         private MidtransService $midtransService,
         private BiteshipService $biteshipService,
@@ -111,14 +113,37 @@ class CheckoutController extends Controller
         }
 
         $paymentMode = PaymentMode::from($data['payment_mode']);
+        $coupon = null;
+        $couponCode = (string) session('checkout_coupon', '');
+
+        if ($couponCode !== '') {
+            try {
+                $coupon = $this->couponService->resolve($couponCode, $user, (float) $this->subtotal($items));
+            } catch (DomainException $exception) {
+                session()->forget('checkout_coupon');
+
+                return back()->withErrors(['coupon' => $exception->getMessage()]);
+            }
+        }
+
         try {
             $order = $this->orderService->createFromCart($user, $paymentMode, [
                 'address_id' => $address->id,
                 'courier_code' => $data['courier_code'],
                 'courier_service' => $data['courier_service'],
                 'shipping_cost' => $rate['price'],
-            ]);
+            ], $coupon);
         } catch (DomainException $exception) {
+            if ($coupon !== null) {
+                try {
+                    $this->couponService->resolve($coupon->code, $user, (float) $this->subtotal($items));
+                } catch (DomainException $couponException) {
+                    session()->forget('checkout_coupon');
+
+                    return back()->withErrors(['coupon' => $couponException->getMessage()]);
+                }
+            }
+
             return back()->withErrors(['checkout' => 'Kuota tidak cukup atau kampanye tidak tersedia lagi.']);
         }
 
@@ -145,6 +170,32 @@ class CheckoutController extends Controller
         }
 
         return redirect()->away($snap['redirect_url']);
+    }
+
+    public function applyCoupon(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'code' => ['required', 'string', 'max:50'],
+        ]);
+        $user = $request->user();
+        $items = $this->cartService->itemsFor($user);
+
+        try {
+            $coupon = $this->couponService->resolve($data['code'], $user, (float) $this->subtotal($items));
+        } catch (DomainException $exception) {
+            return back()->withErrors(['coupon' => $exception->getMessage()]);
+        }
+
+        session(['checkout_coupon' => $coupon->code]);
+
+        return back()->with('success', 'Kupon berhasil dipakai.');
+    }
+
+    public function removeCoupon(Request $request): RedirectResponse
+    {
+        session()->forget('checkout_coupon');
+
+        return back()->with('success', 'Kupon dihapus.');
     }
 
     public function dev(Request $request, Order $order): Response
@@ -210,10 +261,31 @@ class CheckoutController extends Controller
      */
     private function checkoutProps(User $user, iterable $items, int $subtotal, ?array $rates = null, ?int $selectedAddressId = null): array
     {
+        $coupon = null;
+        $discountAmount = 0.0;
+        $couponCode = (string) session('checkout_coupon', '');
+
+        if ($couponCode !== '') {
+            try {
+                $coupon = $this->couponService->resolve($couponCode, $user, (float) $subtotal);
+                $discountAmount = $this->couponService->discountFor($coupon, (float) $subtotal);
+            } catch (DomainException) {
+                session()->forget('checkout_coupon');
+            }
+        }
+
         return [
             'items' => $items,
             'subtotal' => $subtotal,
-            'dp_amount' => (int) round($subtotal * 0.5),
+            'discount_amount' => $discountAmount,
+            'coupon' => $coupon === null ? null : [
+                'code' => $coupon->code,
+                'description' => $coupon->description,
+                'type' => $coupon->type->value,
+                'type_label' => $coupon->type->label(),
+                'value' => (float) $coupon->value,
+            ],
+            'dp_amount' => (int) round(($subtotal - $discountAmount) * 0.5),
             'user' => [
                 'name' => $user->name,
                 'email' => $user->email,

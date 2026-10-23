@@ -7,9 +7,14 @@ import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { index as addressesIndex } from '@/routes/addresses';
 import { rates, store } from '@/routes/checkout';
+import {
+    apply as applyCoupon,
+    remove as removeCoupon,
+} from '@/routes/checkout/coupon';
 import { index as campaignsIndex } from '@/routes/campaigns';
 
 type CheckoutItem = {
@@ -55,6 +60,14 @@ type Props = {
     addresses: Address[];
     courier_rates: CourierRate[] | null;
     selected_address_id: number | null;
+    discount_amount: number;
+    coupon: {
+        code: string;
+        description: string | null;
+        type: 'percentage' | 'fixed';
+        type_label: string;
+        value: number;
+    } | null;
 };
 
 const rupiah = new Intl.NumberFormat('id-ID', {
@@ -73,12 +86,13 @@ const ACTIVE_STEP = 2; // 'Pembayaran'
 export default function CheckoutIndex({
     items,
     subtotal,
-    dp_amount,
     user,
     payment_modes,
     addresses,
     courier_rates,
     selected_address_id,
+    discount_amount,
+    coupon,
 }: Props) {
     const [paymentMode, setPaymentMode] = useState<'dp' | 'lunas'>(
         payment_modes[0] ?? 'dp',
@@ -88,6 +102,7 @@ export default function CheckoutIndex({
     );
     const [selectedRate, setSelectedRate] = useState<CourierRate | null>(null);
     const [rating, setRating] = useState(false);
+    const [removingCoupon, setRemovingCoupon] = useState(false);
 
     const handleGetRates = () => {
         if (!selectedAddressId) {
@@ -112,7 +127,7 @@ export default function CheckoutIndex({
     };
 
     const shippingCost = selectedRate?.price ?? 0;
-    const totalWithShipping = subtotal + shippingCost;
+    const totalWithShipping = subtotal - discount_amount + shippingCost;
     const payNow =
         paymentMode === 'dp'
             ? Math.round(totalWithShipping * 0.5)
@@ -186,6 +201,78 @@ export default function CheckoutIndex({
                         );
                     })}
                 </ol>
+
+                <Form
+                    {...applyCoupon.form()}
+                    disableWhileProcessing
+                    data-test="coupon-form"
+                    className="flex flex-col gap-3"
+                >
+                    {({ processing, errors }) => (
+                        <Card className="gap-3 p-4">
+                            <div className="flex items-center justify-between gap-3">
+                                <h2 className="font-medium">Kupon</h2>
+                                {coupon && <Badge>{coupon.code}</Badge>}
+                            </div>
+                            {coupon ? (
+                                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-emerald-50 p-3 text-sm dark:bg-emerald-950/30">
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <Badge variant="secondary">
+                                                {coupon.type_label}
+                                            </Badge>
+                                            <span className="font-medium">
+                                                {coupon.code}
+                                            </span>
+                                        </div>
+                                        {coupon.description && (
+                                            <span className="text-muted-foreground">
+                                                {coupon.description}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        data-test="remove-coupon-button"
+                                        disabled={removingCoupon}
+                                        onClick={() => {
+                                            setRemovingCoupon(true);
+                                            router.delete(removeCoupon.url(), {
+                                                preserveScroll: true,
+                                                onFinish: () =>
+                                                    setRemovingCoupon(false),
+                                            });
+                                        }}
+                                    >
+                                        {removingCoupon && <Spinner />}
+                                        Hapus
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col gap-2 sm:flex-row">
+                                    <Input
+                                        name="code"
+                                        placeholder="Masukkan kode kupon"
+                                        className="uppercase"
+                                        data-test="coupon-code-input"
+                                    />
+                                    <Button
+                                        type="submit"
+                                        className="gap-1.5 sm:shrink-0"
+                                        data-test="apply-coupon-button"
+                                        disabled={processing}
+                                    >
+                                        {processing && <Spinner />}
+                                        Pakai Kupon
+                                    </Button>
+                                </div>
+                            )}
+                            <InputError message={errors.coupon} />
+                        </Card>
+                    )}
+                </Form>
 
                 <Form
                     {...store.form()}
@@ -450,8 +537,8 @@ export default function CheckoutIndex({
                                                 paymentMode === mode;
                                             const isDp = mode === 'dp';
                                             const amount = isDp
-                                                ? dp_amount
-                                                : subtotal;
+                                                ? payNow
+                                                : totalWithShipping;
 
                                             return (
                                                 <label
@@ -581,6 +668,17 @@ export default function CheckoutIndex({
                                                 {formatPrice(subtotal)}
                                             </span>
                                         </div>
+                                        {discount_amount > 0 && (
+                                            <div className="flex items-center justify-between text-emerald-600">
+                                                <span>Diskon</span>
+                                                <span className="tabular-nums">
+                                                    -
+                                                    {formatPrice(
+                                                        discount_amount,
+                                                    )}
+                                                </span>
+                                            </div>
+                                        )}
                                         <div className="flex items-center justify-between">
                                             <span className="text-muted-foreground">
                                                 Ongkir

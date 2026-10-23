@@ -63,6 +63,8 @@ Route::middleware('auth')->group(function (): void {
 
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/checkout/rates', [CheckoutController::class, 'rates'])->name('checkout.rates');
+    Route::post('/checkout/coupon', [CheckoutController::class, 'applyCoupon'])->name('checkout.coupon.apply');
+    Route::delete('/checkout/coupon', [CheckoutController::class, 'removeCoupon'])->name('checkout.coupon.remove');
     Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:10,1')->name('checkout.store');
     Route::get('/checkout/dev/{order}', [CheckoutController::class, 'dev'])->name('checkout.dev');
     Route::post('/checkout/dev/{order}/pay', [CheckoutController::class, 'devPay'])->name('checkout.dev.pay');
