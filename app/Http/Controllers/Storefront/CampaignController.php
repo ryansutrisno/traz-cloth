@@ -6,6 +6,7 @@ use App\Enums\CampaignStatus;
 use App\Enums\Size;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
+use App\Models\CampaignImage;
 use App\Models\CampaignSize;
 use App\Services\PricingService;
 use App\Services\QuotaService;
@@ -137,6 +138,7 @@ class CampaignController extends Controller
                 'title' => $campaign->title,
                 'description' => $campaign->description,
                 'image_url' => $campaign->image_url,
+                'images' => $campaign->images()->get()->map(fn (CampaignImage $image): string => $image->url)->values()->all(),
                 'base_price' => (float) $campaign->base_price,
                 'quota' => $campaign->quota,
                 'sold_count' => $campaign->sold_count,

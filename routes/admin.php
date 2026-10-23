@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\Auth\AdminLoginController;
 use App\Http\Controllers\Admin\CampaignController;
+use App\Http\Controllers\Admin\CampaignImageController;
 use App\Http\Controllers\Admin\CommunicationController;
 use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\OrderController;
@@ -18,6 +19,9 @@ Route::prefix('admin')->name('admin.')->middleware('web')->group(function (): vo
     Route::middleware(['admin', 'auth:admin'])->group(function (): void {
         Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
         Route::resource('campaigns', CampaignController::class)->except('show');
+        Route::post('campaigns/{campaign}/images', [CampaignImageController::class, 'store'])->name('campaigns.images.store');
+        Route::delete('campaigns/{campaign}/images/{image}', [CampaignImageController::class, 'destroy'])->name('campaigns.images.destroy');
+        Route::put('campaigns/{campaign}/images/{image}/primary', [CampaignImageController::class, 'primary'])->name('campaigns.images.primary');
         Route::resource('coupons', CouponController::class)->except('show');
 
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');

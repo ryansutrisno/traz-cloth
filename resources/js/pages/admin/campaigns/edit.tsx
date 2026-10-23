@@ -1,7 +1,14 @@
 import { Form, Head, Link, router } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { destroy, index, update } from '@/routes/admin/campaigns';
+import campaignImages from '@/routes/admin/campaigns/images';
 
 type CampaignSizeData = {
     size: string;
@@ -37,8 +45,16 @@ type Campaign = {
     sizes: CampaignSizeData[];
 };
 
+type CampaignImage = {
+    id: number;
+    url: string;
+    is_primary: boolean;
+    sort_order: number;
+};
+
 type Props = {
     campaign: Campaign;
+    images: CampaignImage[];
     sizes: string[];
     statuses: string[];
 };
@@ -62,12 +78,17 @@ const textAreaClass =
 
 export default function AdminCampaignsEdit({
     campaign,
+    images,
     sizes,
     statuses,
 }: Props) {
     const [title, setTitle] = useState(campaign.title);
     const [slug, setSlug] = useState(campaign.slug);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [galleryPreviews, setGalleryPreviews] = useState<
+        { name: string; url: string }[]
+    >([]);
+    const galleryInputRef = useRef<HTMLInputElement>(null);
     // Slug sudah ditetapkan di edit — anggap sudah final kecuali user edit manual.
     const [slugTouched, setSlugTouched] = useState(true);
 
@@ -78,6 +99,14 @@ export default function AdminCampaignsEdit({
             }
         };
     }, [imagePreview]);
+
+    useEffect(() => {
+        return () => {
+            for (const preview of galleryPreviews) {
+                URL.revokeObjectURL(preview.url);
+            }
+        };
+    }, [galleryPreviews]);
 
     const sizeMap = new Map<string, CampaignSizeData>();
 
@@ -100,6 +129,25 @@ export default function AdminCampaignsEdit({
 
     const handleImageChange = (file: File | undefined) => {
         setImagePreview(file ? URL.createObjectURL(file) : null);
+    };
+
+    const handleGalleryChange = (files: FileList | null) => {
+        setGalleryPreviews(
+            files
+                ? Array.from(files).map((file) => ({
+                      name: file.name,
+                      url: URL.createObjectURL(file),
+                  }))
+                : [],
+        );
+    };
+
+    const resetGalleryUpload = () => {
+        setGalleryPreviews([]);
+
+        if (galleryInputRef.current) {
+            galleryInputRef.current.value = '';
+        }
     };
 
     const handleDelete = () => {
@@ -463,6 +511,149 @@ export default function AdminCampaignsEdit({
                         </>
                     )}
                 </Form>
+
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <CardTitle>Galeri Foto</CardTitle>
+                                <CardDescription>
+                                    Maksimal 8 foto. Foto bertanda utama dipakai
+                                    sebagai thumbnail katalog.
+                                </CardDescription>
+                            </div>
+                            <span className="text-sm text-muted-foreground">
+                                {images.length}/8
+                            </span>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="grid gap-6">
+                        {images.length > 0 && (
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                {images.map((image) => (
+                                    <div key={image.id} className="grid gap-2">
+                                        <div className="relative">
+                                            <img
+                                                src={image.url}
+                                                alt={`Foto galeri ${campaign.title}`}
+                                                className="aspect-square w-full rounded-lg border object-cover"
+                                            />
+                                            {image.is_primary && (
+                                                <span className="absolute top-2 left-2 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
+                                                    Utama
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="grid gap-2">
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                disabled={image.is_primary}
+                                                onClick={() =>
+                                                    router.put(
+                                                        campaignImages.primary.url(
+                                                            {
+                                                                campaign:
+                                                                    campaign.id,
+                                                                image: image.id,
+                                                            },
+                                                        ),
+                                                        {},
+                                                        {
+                                                            preserveScroll: true,
+                                                        },
+                                                    )
+                                                }
+                                            >
+                                                Jadikan Utama
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="destructive"
+                                                onClick={() => {
+                                                    if (
+                                                        !window.confirm(
+                                                            'Hapus foto ini?',
+                                                        )
+                                                    ) {
+                                                        return;
+                                                    }
+
+                                                    router.delete(
+                                                        campaignImages.destroy.url(
+                                                            {
+                                                                campaign:
+                                                                    campaign.id,
+                                                                image: image.id,
+                                                            },
+                                                        ),
+                                                        {
+                                                            preserveScroll: true,
+                                                        },
+                                                    );
+                                                }}
+                                            >
+                                                Hapus
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <Form
+                            {...campaignImages.store.form({
+                                campaign: campaign.id,
+                            })}
+                            encType="multipart/form-data"
+                            onSuccess={resetGalleryUpload}
+                            className="grid gap-3"
+                        >
+                            {({ processing, errors }) => (
+                                <>
+                                    <Input
+                                        ref={galleryInputRef}
+                                        type="file"
+                                        name="images[]"
+                                        multiple
+                                        accept="image/*"
+                                        disabled={images.length >= 8}
+                                        onChange={(event) =>
+                                            handleGalleryChange(
+                                                event.target.files,
+                                            )
+                                        }
+                                    />
+                                    {galleryPreviews.length > 0 && (
+                                        <div className="grid gap-1 text-sm text-muted-foreground">
+                                            {galleryPreviews.map((preview) => (
+                                                <span key={preview.url}>
+                                                    {preview.name}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <InputError message={errors.images} />
+                                    <InputError message={errors['images.0']} />
+                                    <Button
+                                        type="submit"
+                                        className="w-fit"
+                                        disabled={
+                                            processing ||
+                                            images.length >= 8 ||
+                                            galleryPreviews.length === 0
+                                        }
+                                    >
+                                        {processing && <Spinner />}
+                                        Unggah Foto
+                                    </Button>
+                                </>
+                            )}
+                        </Form>
+                    </CardContent>
+                </Card>
             </div>
         </>
     );

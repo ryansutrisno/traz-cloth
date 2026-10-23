@@ -496,7 +496,6 @@ traz-cloth/
 ## 11. Item Lanjutan (Backlog — Belum Diputuskan)
 
 - Pengiriman otomatis label/PDF via Biteship (opsional).
-- Multi foto desain (galeri per kampanye).
 - Notifikasi email tambahan (selain WA).
 - Backup & restore otomatis PostgreSQL (jadwal Dokploy).
 - Pemantauan (monitoring) error via log/sentry.
@@ -516,6 +515,19 @@ traz-cloth/
 | K7 | Kupon diinput di halaman checkout; validasi ulang dilakukan server-side saat order dibuat |
 | K8 | Order menyimpan snapshot `coupon_id`, `coupon_code`, `discount_amount` untuk audit |
 | K9 | Kupon yang sudah pernah dipakai tidak bisa dihapus admin, hanya dinonaktifkan |
+
+---
+
+## 13. Galeri Multi Foto Kampanye (Diputuskan 2026-10-23)
+
+| # | Keputusan |
+|---|-----------|
+| G1 | Maksimal **8 foto** per kampanye |
+| G2 | Satu foto ditandai **utama**; dipakai sebagai thumbnail katalog, keranjang, dan detail pesanan |
+| G3 | `campaigns.image_url` tetap dipertahankan sebagai gambar utama agar tampilan lama tidak berubah |
+| G4 | Format `jpg/jpeg/png/webp`, maksimal **2 MB** per foto |
+| G5 | Admin dapat menambah, menghapus, dan memilih foto utama (tanpa drag-and-drop urutan) |
+| G6 | File dihapus dari storage saat foto dihapus atau kampanye dihapus |
 
 ---
 

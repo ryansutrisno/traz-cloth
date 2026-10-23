@@ -69,4 +69,31 @@ class Campaign extends Model
     {
         return $this->hasMany(CampaignSize::class);
     }
+
+    /**
+     * Get the campaign gallery images in display order.
+     */
+    public function images(): HasMany
+    {
+        return $this->hasMany(CampaignImage::class)
+            ->orderByDesc('is_primary')
+            ->orderBy('sort_order')
+            ->orderBy('id');
+    }
+
+    /**
+     * Get the campaign's primary gallery image.
+     */
+    public function primaryImage(): ?CampaignImage
+    {
+        if ($this->relationLoaded('images')) {
+            return $this->images->first();
+        }
+
+        return $this->images()
+            ->where('is_primary', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->first();
+    }
 }
