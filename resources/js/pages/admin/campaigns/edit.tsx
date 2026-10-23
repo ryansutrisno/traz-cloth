@@ -1,5 +1,5 @@
 import { Form, Head, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -67,8 +67,17 @@ export default function AdminCampaignsEdit({
 }: Props) {
     const [title, setTitle] = useState(campaign.title);
     const [slug, setSlug] = useState(campaign.slug);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
     // Slug sudah ditetapkan di edit — anggap sudah final kecuali user edit manual.
     const [slugTouched, setSlugTouched] = useState(true);
+
+    useEffect(() => {
+        return () => {
+            if (imagePreview) {
+                URL.revokeObjectURL(imagePreview);
+            }
+        };
+    }, [imagePreview]);
 
     const sizeMap = new Map<string, CampaignSizeData>();
 
@@ -87,6 +96,10 @@ export default function AdminCampaignsEdit({
     const handleSlugChange = (value: string) => {
         setSlugTouched(true);
         setSlug(value);
+    };
+
+    const handleImageChange = (file: File | undefined) => {
+        setImagePreview(file ? URL.createObjectURL(file) : null);
     };
 
     const handleDelete = () => {
@@ -198,21 +211,31 @@ export default function AdminCampaignsEdit({
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="image_url">
-                                            URL Gambar
-                                        </Label>
+                                        <Label htmlFor="image">Gambar</Label>
                                         <Input
-                                            id="image_url"
-                                            name="image_url"
-                                            type="url"
-                                            defaultValue={
-                                                campaign.image_url ?? ''
+                                            id="image"
+                                            name="image"
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) =>
+                                                handleImageChange(
+                                                    e.target.files?.[0],
+                                                )
                                             }
-                                            placeholder="https://..."
                                         />
-                                        <InputError
-                                            message={errors.image_url}
-                                        />
+                                        {(imagePreview ||
+                                            campaign.image_url) && (
+                                            <img
+                                                src={
+                                                    imagePreview ??
+                                                    campaign.image_url ??
+                                                    ''
+                                                }
+                                                alt="Preview gambar kampanye"
+                                                className="aspect-video w-full rounded-md border object-cover"
+                                            />
+                                        )}
+                                        <InputError message={errors.image} />
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">

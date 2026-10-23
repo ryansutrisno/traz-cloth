@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Storefront\AccountController;
 use App\Http\Controllers\Storefront\AddressController;
 use App\Http\Controllers\Storefront\Auth\RegisteredUserController;
 use App\Http\Controllers\Storefront\CampaignController;
@@ -23,6 +24,9 @@ Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe'])
 Route::inertia('/terms', 'terms')->name('terms');
 Route::inertia('/privacy-policy', 'privacy')->name('privacy-policy');
 Route::inertia('/contact', 'contact')->name('contact');
+Route::inertia('/faq', 'faq')->name('faq');
+Route::inertia('/tentang', 'about')->name('about');
+Route::inertia('/kebijakan-pengiriman', 'shipping-policy')->name('shipping-policy');
 
 Route::middleware('guest')->group(function () {
     Route::get('/register', [RegisteredUserController::class, 'showRegister'])->name('register');
@@ -44,6 +48,14 @@ Route::patch('/cart/{cartItem}', [CartController::class, 'update'])->name('cart.
 Route::delete('/cart/{cartItem}', [CartController::class, 'destroy'])->name('cart.destroy');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/akun', [AccountController::class, 'index'])->name('account.index');
+    Route::post('/akun/phone', [AccountController::class, 'updatePhone'])
+        ->middleware('throttle:otp')
+        ->name('account.phone.update');
+    Route::post('/akun/phone/verify', [AccountController::class, 'verifyPhone'])
+        ->middleware('throttle:otp')
+        ->name('account.phone.verify');
+
     Route::get('/alamat', [AddressController::class, 'index'])->name('addresses.index');
     Route::post('/alamat', [AddressController::class, 'store'])->name('addresses.store');
     Route::patch('/alamat/{address}', [AddressController::class, 'update'])->name('addresses.update');
@@ -62,6 +74,7 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/orders/{order}/pay-remaining', [OrderController::class, 'payRemaining'])
         ->middleware('throttle:10,1')
         ->name('orders.pay-remaining');
+    Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
 });
 
 if (file_exists(__DIR__.'/admin.php')) {

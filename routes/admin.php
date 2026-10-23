@@ -30,5 +30,7 @@ Route::prefix('admin')->name('admin.')->middleware('web')->group(function (): vo
             ->name('komunikasi.send');
         Route::get('/laporan', [ReportController::class, 'index'])->name('laporan.index');
         Route::get('/ready-stock', [ReadyStockController::class, 'index'])->name('ready-stock.index');
+        Route::match(['put', 'patch'], '/ready-stock/{campaignSize}', [ReadyStockController::class, 'update'])->name('ready-stock.update');
+        Route::delete('/ready-stock/{campaignSize}', [ReadyStockController::class, 'destroy'])->name('ready-stock.destroy');
     });
 });

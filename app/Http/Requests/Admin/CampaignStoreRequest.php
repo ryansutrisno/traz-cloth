@@ -24,7 +24,7 @@ class CampaignStoreRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255', 'unique:campaigns,slug'],
             'description' => ['nullable', 'string'],
-            'image_url' => ['nullable', 'url', 'max:2048'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'base_price' => ['required', 'numeric', 'min:0', 'max:999999999'],
             'cost_per_item' => ['nullable', 'numeric', 'min:0'],
             'quota' => ['required', 'integer', 'min:1'],

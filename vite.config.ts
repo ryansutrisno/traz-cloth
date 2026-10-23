@@ -13,10 +13,7 @@ export default defineConfig({
             refresh: true,
             fonts: [
                 bunny('Inter', {
-                    weights: [400, 500, 600],
-                }),
-                bunny('Montserrat', {
-                    weights: [600, 700],
+                    weights: [400, 500, 600, 700],
                 }),
             ],
         }),
@@ -29,7 +26,10 @@ export default defineConfig({
         tailwindcss(),
         wayfinder({
             formVariants: true,
-            command: process.env.WAYFINDER_SKIP_PHP === '1' ? 'true' : 'php artisan wayfinder:generate',
+            command:
+                process.env.WAYFINDER_SKIP_PHP === '1'
+                    ? 'true'
+                    : 'php artisan wayfinder:generate',
         }),
     ],
 });

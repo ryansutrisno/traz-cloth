@@ -106,10 +106,7 @@ function decodeLabel(label: string): string {
     return label;
 }
 
-export default function AdminKomunikasi({
-    buyers,
-    wa_messages,
-}: Props) {
+export default function AdminKomunikasi({ buyers, wa_messages }: Props) {
     const [selectedBuyerId, setSelectedBuyerId] = useState('');
     const [message, setMessage] = useState('');
     const [sending, setSending] = useState(false);

@@ -5,9 +5,12 @@ namespace App\Models;
 use App\Enums\CampaignStatus;
 use Database\Factories\CampaignFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * @property int $id
@@ -41,6 +44,22 @@ class Campaign extends Model
             'status' => CampaignStatus::class,
             'ready_stock_enabled' => 'boolean',
         ];
+    }
+
+    /**
+     * Get the public URL for the campaign image while preserving legacy URLs.
+     */
+    protected function imageUrl(): Attribute
+    {
+        return Attribute::make(
+            get: function (?string $value): ?string {
+                if ($value === null || Str::startsWith($value, ['http://', 'https://'])) {
+                    return $value;
+                }
+
+                return Storage::disk('public')->url($value);
+            },
+        );
     }
 
     /**

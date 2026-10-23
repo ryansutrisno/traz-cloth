@@ -13,11 +13,14 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
 
 class CampaignController extends Controller
 {
@@ -87,11 +90,14 @@ class CampaignController extends Controller
         $data = $request->validated();
 
         $campaign = DB::transaction(function () use ($data, $request): Campaign {
+            $image = $request->file('image');
+            $imagePath = $image instanceof UploadedFile ? $this->storeImage($image) : null;
+
             $campaign = Campaign::create([
                 'slug' => $this->uniqueSlug($data['slug'] ?: Str::slug($data['title'])),
                 'title' => $data['title'],
                 'description' => $data['description'] ?? null,
-                'image_url' => $data['image_url'] ?? null,
+                'image_url' => $imagePath,
                 'base_price' => $data['base_price'],
                 'cost_per_item' => $data['cost_per_item'] ?? null,
                 'quota' => $data['quota'],
@@ -144,17 +150,30 @@ class CampaignController extends Controller
         $data = $request->validated();
 
         DB::transaction(function () use ($data, $request, $campaign): void {
-            $campaign->update([
+            $campaignData = [
                 'slug' => $this->uniqueSlug($data['slug'] ?: Str::slug($data['title']), $campaign->id),
                 'title' => $data['title'],
                 'description' => $data['description'] ?? null,
-                'image_url' => $data['image_url'] ?? null,
                 'base_price' => $data['base_price'],
                 'cost_per_item' => $data['cost_per_item'] ?? null,
                 'quota' => $data['quota'],
                 'status' => $data['status'],
                 'ready_stock_enabled' => $request->boolean('ready_stock_enabled', true),
-            ]);
+            ];
+
+            $image = $request->file('image');
+
+            if ($image instanceof UploadedFile) {
+                $oldImagePath = $campaign->getRawOriginal('image_url');
+                $campaignData['image_url'] = $this->storeImage($image);
+                $campaign->update($campaignData);
+
+                if ($this->isLocalImagePath($oldImagePath)) {
+                    Storage::disk('public')->delete($oldImagePath);
+                }
+            } else {
+                $campaign->update($campaignData);
+            }
 
             foreach (Size::cases() as $size) {
                 $sizeData = $data['sizes'][$size->value] ?? [];
@@ -227,5 +246,25 @@ class CampaignController extends Controller
                 'enabled' => $sizeData['enabled'] ?? false,
             ]);
         }
+    }
+
+    private function storeImage(?UploadedFile $image): ?string
+    {
+        if ($image === null) {
+            return null;
+        }
+
+        $path = Storage::disk('public')->putFile('campaigns', $image);
+
+        if ($path === false) {
+            throw new RuntimeException('Gambar kampanye gagal disimpan.');
+        }
+
+        return $path;
+    }
+
+    private function isLocalImagePath(?string $path): bool
+    {
+        return $path !== null && ! Str::startsWith($path, ['http://', 'https://']);
     }
 }

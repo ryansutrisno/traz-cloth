@@ -14,6 +14,7 @@ type OrderRow = {
     total_amount: string;
     created_at: string;
     items_count: number;
+    resi_number: string | null;
 };
 
 type PaginationLink = {
@@ -180,6 +181,14 @@ export default function OrdersIndex({ orders }: Props) {
                                         {STATUS_LABELS[order.status] ??
                                             order.status}
                                     </Badge>
+                                    {order.resi_number && (
+                                        <Badge
+                                            data-test="buyer-order-shipping-badge"
+                                            variant="secondary"
+                                        >
+                                            Dikirim · {order.resi_number}
+                                        </Badge>
+                                    )}
                                 </div>
                                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t pt-3">
                                     <div className="flex items-center gap-3 text-sm text-muted-foreground">

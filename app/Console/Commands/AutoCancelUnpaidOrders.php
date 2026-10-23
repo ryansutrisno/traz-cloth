@@ -55,18 +55,6 @@ class AutoCancelUnpaidOrders extends Command
             try {
                 $this->orderService->cancel($order, OrderStatus::DibatalkanSistem, $note);
             } catch (DomainException $exception) {
-                if ($order->status === OrderStatus::SiapKirim) {
-                    try {
-                        $this->orderService->transition($order, OrderStatus::DibatalkanSistem, $note);
-
-                        continue;
-                    } catch (DomainException $transitionException) {
-                        $this->warn($order->order_number.': '.$transitionException->getMessage());
-
-                        continue;
-                    }
-                }
-
                 $this->warn($order->order_number.': '.$exception->getMessage());
             }
         }

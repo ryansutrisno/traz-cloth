@@ -8,6 +8,8 @@ use App\Models\Admin;
 use App\Models\Campaign;
 use App\Models\CampaignSize;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -60,6 +62,37 @@ class AdminCampaignTest extends TestCase
             'price_override' => 125000,
             'enabled' => true,
         ]);
+    }
+
+    public function test_admin_can_upload_campaign_image(): void
+    {
+        $this->login();
+        Storage::fake('public');
+
+        $response = $this->post(route('admin.campaigns.store'), $this->campaignPayload([
+            'image' => UploadedFile::fake()->image('campaign.png'),
+        ]));
+
+        $campaign = Campaign::query()->firstOrFail();
+        $path = $campaign->getRawOriginal('image_url');
+
+        $response->assertRedirect(route('admin.campaigns.edit', $campaign));
+        $this->assertIsString($path);
+        $this->assertStringStartsWith('campaigns/', $path);
+        Storage::disk('public')->assertExists($path);
+        $this->assertSame(Storage::disk('public')->url($path), $campaign->image_url);
+    }
+
+    public function test_campaign_image_must_be_an_image(): void
+    {
+        $this->login();
+
+        $response = $this->post(route('admin.campaigns.store'), $this->campaignPayload([
+            'image' => UploadedFile::fake()->create('campaign.pdf', 100, 'application/pdf'),
+        ]));
+
+        $response->assertSessionHasErrors('image');
+        $this->assertDatabaseCount('campaigns', 0);
     }
 
     public function test_slug_must_be_unique(): void
@@ -159,7 +192,6 @@ class AdminCampaignTest extends TestCase
             'title' => 'Kampanye Baru',
             'slug' => null,
             'description' => 'Deskripsi kampanye.',
-            'image_url' => 'https://example.com/campaign.jpg',
             'base_price' => 100000,
             'quota' => 100,
             'status' => CampaignStatus::Draft->value,

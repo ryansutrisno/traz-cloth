@@ -90,9 +90,9 @@ class ProcessMidtransWebhook implements ShouldQueue
                 try {
                     if ($isPelunasan) {
                         if ($lockedOrder->status === OrderStatus::SiapKirim) {
-                            $orderService->transition(
+                            $orderService->markLunas(
                                 $lockedOrder,
-                                OrderStatus::Lunas,
+                                $payment,
                                 'Pelunasan via Midtrans ('.$transactionStatus.')',
                             );
                         } elseif ($lockedOrder->status !== OrderStatus::Lunas) {

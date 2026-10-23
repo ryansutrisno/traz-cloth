@@ -5,9 +5,19 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { index as campaignsIndex } from '@/routes/campaigns';
 import {
     index as ordersIndex,
+    cancel as cancelOrder,
     payRemaining,
     show as ordersShow,
 } from '@/routes/orders';
@@ -39,9 +49,11 @@ type Order = {
     total_amount: string;
     payment_due_at: string | null;
     created_at: string;
-    resi_number?: string | null;
-    courier_code?: string | null;
-    courier_service?: string | null;
+    courier_code: string | null;
+    courier_service: string | null;
+    resi_number: string | null;
+    shipped_at: string | null;
+    delivered_at: string | null;
     items: OrderItem[];
     payments: Payment[];
 };
@@ -146,6 +158,16 @@ export default function OrdersShow({
     remaining_amount,
 }: Props) {
     const [paying, setPaying] = useState(false);
+    const [cancelOpen, setCancelOpen] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
+
+    const canCancel = [
+        'menunggu_pembayaran',
+        'dp_dibayar',
+        'produksi',
+        'siap_kirim',
+        'lunas',
+    ].includes(order.status);
 
     const handlePayRemaining = () => {
         setPaying(true);
@@ -163,6 +185,29 @@ export default function OrdersShow({
             },
         );
         // onSuccess diabaikan: server redirect eksternal ke Midtrans/dev.
+    };
+
+    const handleCancel = () => {
+        setCancelling(true);
+        router.post(
+            cancelOrder.url({ order: order.id }),
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setCancelOpen(false);
+                    toast.success('Pesanan berhasil dibatalkan.');
+                },
+                onError: (errors) => {
+                    setCancelling(false);
+                    toast.error(
+                        (errors.order as string | undefined) ??
+                            'Pesanan gagal dibatalkan.',
+                    );
+                },
+                onFinish: () => setCancelling(false),
+            },
+        );
     };
 
     return (
@@ -305,33 +350,67 @@ export default function OrdersShow({
                             )}
                         </Card>
 
-                        {/* Resi */}
-                        {order.resi_number && (
+                        {/* Shipping */}
+                        {(order.courier_code ||
+                            order.courier_service ||
+                            order.resi_number ||
+                            order.shipped_at ||
+                            order.delivered_at) && (
                             <Card className="gap-3 p-4">
-                                <h2 className="font-medium">Resi Pengiriman</h2>
-                                <div className="flex flex-col gap-1 rounded-lg bg-muted/50 p-3 text-sm">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-muted-foreground">
-                                            Nomor resi:
-                                        </span>
-                                        <span
-                                            data-test="resi-number"
-                                            className="font-mono font-medium"
-                                        >
-                                            {order.resi_number}
-                                        </span>
-                                    </div>
-                                    {(order.courier_code ||
-                                        order.courier_service) && (
-                                        <p className="text-xs text-muted-foreground">
-                                            {order.courier_code?.toUpperCase()}{' '}
-                                            {order.courier_service}
-                                        </p>
-                                    )}
+                                <h2 className="font-medium">Pengiriman</h2>
+                                <div className="flex flex-col gap-2 rounded-lg bg-muted/50 p-3 text-sm">
                                     {order.courier_code && (
-                                        <p className="text-xs text-muted-foreground">
-                                            Lacak di {order.courier_code}
-                                        </p>
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span className="text-muted-foreground">
+                                                Kurir
+                                            </span>
+                                            <span className="font-medium uppercase">
+                                                {order.courier_code}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {order.courier_service && (
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span className="text-muted-foreground">
+                                                Layanan
+                                            </span>
+                                            <span className="font-medium">
+                                                {order.courier_service}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {order.resi_number && (
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span className="text-muted-foreground">
+                                                Nomor resi
+                                            </span>
+                                            <span
+                                                data-test="resi-number"
+                                                className="font-mono font-medium select-all"
+                                            >
+                                                {order.resi_number}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {order.shipped_at && (
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span className="text-muted-foreground">
+                                                Dikirim
+                                            </span>
+                                            <span>
+                                                {formatDate(order.shipped_at)}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {order.delivered_at && (
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span className="text-muted-foreground">
+                                                Diterima
+                                            </span>
+                                            <span>
+                                                {formatDate(order.delivered_at)}
+                                            </span>
+                                        </div>
                                     )}
                                 </div>
                             </Card>
@@ -410,6 +489,66 @@ export default function OrdersShow({
                                             : 'Bayar Pelunasan'}
                                     </Button>
                                 </div>
+                            )}
+
+                            {canCancel && (
+                                <Dialog
+                                    open={cancelOpen}
+                                    onOpenChange={setCancelOpen}
+                                >
+                                    <DialogTrigger asChild>
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            className="w-full"
+                                            data-test="cancel-order-button"
+                                            disabled={cancelling}
+                                        >
+                                            Batalkan Pesanan
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>
+                                                Batalkan pesanan?
+                                            </DialogTitle>
+                                            <DialogDescription>
+                                                Pesanan yang dibatalkan tidak
+                                                dapat dilanjutkan kembali.
+                                                {order.payment_mode === 'dp' &&
+                                                    order.status !==
+                                                        'menunggu_pembayaran' && (
+                                                        <span className="mt-2 block font-medium text-destructive">
+                                                            DP hangus dan tidak
+                                                            ada refund.
+                                                        </span>
+                                                    )}
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <DialogFooter>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() =>
+                                                    setCancelOpen(false)
+                                                }
+                                                disabled={cancelling}
+                                            >
+                                                Jangan Batalkan
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="destructive"
+                                                onClick={handleCancel}
+                                                disabled={cancelling}
+                                            >
+                                                {cancelling
+                                                    ? 'Membatalkan...'
+                                                    : 'Ya, Batalkan Pesanan'}
+                                            </Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
                             )}
 
                             <Button

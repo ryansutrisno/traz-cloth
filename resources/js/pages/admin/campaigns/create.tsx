@@ -1,5 +1,5 @@
 import { Form, Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -41,6 +41,15 @@ export default function AdminCampaignsCreate({ sizes, statuses }: Props) {
     const [title, setTitle] = useState('');
     const [slug, setSlug] = useState('');
     const [slugTouched, setSlugTouched] = useState(false);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (imagePreview) {
+                URL.revokeObjectURL(imagePreview);
+            }
+        };
+    }, [imagePreview]);
 
     const handleTitleChange = (value: string) => {
         setTitle(value);
@@ -53,6 +62,10 @@ export default function AdminCampaignsCreate({ sizes, statuses }: Props) {
     const handleSlugChange = (value: string) => {
         setSlugTouched(true);
         setSlug(value);
+    };
+
+    const handleImageChange = (file: File | undefined) => {
+        setImagePreview(file ? URL.createObjectURL(file) : null);
     };
 
     return (
@@ -153,18 +166,26 @@ export default function AdminCampaignsCreate({ sizes, statuses }: Props) {
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="image_url">
-                                            URL Gambar
-                                        </Label>
+                                        <Label htmlFor="image">Gambar</Label>
                                         <Input
-                                            id="image_url"
-                                            name="image_url"
-                                            type="url"
-                                            placeholder="https://..."
+                                            id="image"
+                                            name="image"
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) =>
+                                                handleImageChange(
+                                                    e.target.files?.[0],
+                                                )
+                                            }
                                         />
-                                        <InputError
-                                            message={errors.image_url}
-                                        />
+                                        {imagePreview && (
+                                            <img
+                                                src={imagePreview}
+                                                alt="Preview gambar kampanye"
+                                                className="aspect-video w-full rounded-md border object-cover"
+                                            />
+                                        )}
+                                        <InputError message={errors.image} />
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">

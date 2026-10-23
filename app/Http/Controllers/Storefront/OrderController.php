@@ -10,6 +10,8 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Services\MidtransService;
+use App\Services\OrderService;
+use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -17,7 +19,10 @@ use Inertia\Response;
 
 class OrderController extends Controller
 {
-    public function __construct(private MidtransService $midtransService) {}
+    public function __construct(
+        private MidtransService $midtransService,
+        private OrderService $orderService,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -38,6 +43,7 @@ class OrderController extends Controller
                     'total_amount' => $order->total_amount,
                     'created_at' => $order->created_at,
                     'items_count' => $order->items_count,
+                    'resi_number' => $order->resi_number,
                 ])->values()->all(),
                 'pagination' => [
                     'current_page' => $orders->currentPage(),
@@ -67,6 +73,11 @@ class OrderController extends Controller
                 'total_amount' => $order->total_amount,
                 'payment_due_at' => $order->payment_due_at,
                 'created_at' => $order->created_at,
+                'courier_code' => $order->courier_code,
+                'courier_service' => $order->courier_service,
+                'resi_number' => $order->resi_number,
+                'shipped_at' => $order->shipped_at,
+                'delivered_at' => $order->delivered_at,
                 'items' => $order->items->map(fn (OrderItem $item): array => [
                     'id' => $item->id,
                     'title' => $item->campaign->title,
@@ -120,6 +131,28 @@ class OrderController extends Controller
         }
 
         return redirect()->away($snap['redirect_url']);
+    }
+
+    public function cancel(Request $request, Order $order): RedirectResponse
+    {
+        $this->ensureOwnership($request, $order);
+
+        if (in_array($order->status, [
+            OrderStatus::Dikirim,
+            OrderStatus::Delivered,
+            OrderStatus::DibatalkanBuyer,
+            OrderStatus::DibatalkanSistem,
+        ], true)) {
+            return back()->withErrors(['order' => 'Pesanan tidak dapat dibatalkan pada status ini.']);
+        }
+
+        try {
+            $this->orderService->cancel($order, OrderStatus::DibatalkanBuyer, 'Dibatalkan oleh pembeli');
+        } catch (DomainException $exception) {
+            return back()->withErrors(['order' => $exception->getMessage()]);
+        }
+
+        return back()->with('success', 'Pesanan berhasil dibatalkan.');
     }
 
     private function ensureOwnership(Request $request, Order $order): void

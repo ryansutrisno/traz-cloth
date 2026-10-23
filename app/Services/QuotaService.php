@@ -13,7 +13,15 @@ class QuotaService
 
     public function isSoldOut(Campaign $campaign): bool
     {
-        return $this->availableSlots($campaign) === 0;
+        if ($this->availableSlots($campaign) > 0) {
+            return false;
+        }
+
+        $readyStock = $campaign->relationLoaded('sizes')
+            ? $campaign->sizes->sum('stock')
+            : $campaign->sizes()->where('stock', '>', 0)->sum('stock');
+
+        return $readyStock <= 0;
     }
 
     public function progressPercent(Campaign $campaign): int
