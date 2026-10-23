@@ -75,6 +75,8 @@ type Order = {
     status: string;
     payment_mode: 'dp' | 'lunas';
     subtotal: string;
+    discount_amount: number;
+    coupon_code: string | null;
     dp_amount: string | null;
     total_amount: string;
     payment_due_at: string | null;
@@ -379,6 +381,27 @@ export default function AdminOrdersShow({
                                         {formatPrice(order.subtotal)}
                                     </span>
                                 </div>
+                                {order.discount_amount > 0 && (
+                                    <div className="flex items-center justify-between text-emerald-600">
+                                        <span>Diskon</span>
+                                        <span className="tabular-nums">
+                                            -
+                                            {formatPrice(
+                                                String(order.discount_amount),
+                                            )}
+                                        </span>
+                                    </div>
+                                )}
+                                {order.coupon_code && (
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground">
+                                            Kupon
+                                        </span>
+                                        <Badge variant="secondary">
+                                            {order.coupon_code}
+                                        </Badge>
+                                    </div>
+                                )}
                                 {order.payment_mode === 'dp' && (
                                     <div className="flex items-center justify-between">
                                         <span className="text-muted-foreground">

@@ -12,6 +12,7 @@ use App\Jobs\SendWhatsAppMessage;
 use App\Models\Campaign;
 use App\Models\CampaignSize;
 use App\Models\CartItem;
+use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
@@ -64,6 +65,7 @@ class OrderService
     public function __construct(
         private PricingService $pricingService,
         private QuotaService $quotaService,
+        private CouponService $couponService,
     ) {}
 
     public function generateOrderNumber(): string
@@ -79,9 +81,9 @@ class OrderService
         throw new DomainException('Nomor order tidak dapat dibuat.');
     }
 
-    public function createFromCart(User $user, PaymentMode $paymentMode, array $shipping = []): Order
+    public function createFromCart(User $user, PaymentMode $paymentMode, array $shipping = [], ?Coupon $coupon = null): Order
     {
-        return DB::transaction(function () use ($user, $paymentMode, $shipping): Order {
+        return DB::transaction(function () use ($user, $paymentMode, $shipping, $coupon): Order {
             $cartItems = CartItem::query()
                 ->where('user_id', $user->id)
                 ->with('campaign.sizes')
@@ -135,8 +137,16 @@ class OrderService
                 }
             }
 
+            $discountAmount = 0.0;
+
+            if ($coupon !== null) {
+                $coupon = $this->couponService->resolve($coupon->code, $user, (float) $subtotal);
+                $coupon = $this->couponService->consume($coupon);
+                $discountAmount = $this->couponService->discountFor($coupon, (float) $subtotal);
+            }
+
             $shippingCost = $shipping === [] ? 0 : (float) ($shipping['shipping_cost'] ?? 0);
-            $totalAmount = $subtotal + $shippingCost;
+            $totalAmount = $subtotal - $discountAmount + $shippingCost;
             $dpAmount = $paymentMode === PaymentMode::Dp
                 ? max(1, (int) round($totalAmount * 0.5))
                 : null;
@@ -145,6 +155,9 @@ class OrderService
                 'order_number' => $this->generateOrderNumber(),
                 'status' => OrderStatus::MenungguPembayaran,
                 'payment_mode' => $paymentMode,
+                'coupon_id' => $coupon?->id,
+                'coupon_code' => $coupon?->code,
+                'discount_amount' => $discountAmount,
                 'subtotal' => $subtotal,
                 'total_amount' => $totalAmount,
                 'dp_amount' => $dpAmount,
@@ -290,7 +303,10 @@ class OrderService
                 $this->releaseReadyStock($lockedOrder);
             }
 
-            return $this->recordStatusHistory($lockedOrder, $status, $note);
+            $updatedOrder = $this->recordStatusHistory($lockedOrder, $status, $note);
+            $this->couponService->releaseUsage($lockedOrder);
+
+            return $updatedOrder;
         });
     }
 

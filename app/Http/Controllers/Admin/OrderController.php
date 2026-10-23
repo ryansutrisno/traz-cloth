@@ -220,6 +220,8 @@ class OrderController extends Controller
                 'status' => $order->status->value,
                 'payment_mode' => $order->payment_mode->value,
                 'subtotal' => $order->subtotal,
+                'discount_amount' => (float) $order->discount_amount,
+                'coupon_code' => $order->coupon_code,
                 'dp_amount' => $order->dp_amount,
                 'total_amount' => $order->total_amount,
                 'payment_due_at' => $order->payment_due_at,
