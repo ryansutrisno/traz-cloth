@@ -178,6 +178,10 @@ export default function AdminCampaignsCreate({ sizes, statuses }: Props) {
                                                 )
                                             }
                                         />
+                                        <p className="text-xs text-muted-foreground">
+                                            Foto tambahan bisa diunggah setelah
+                                            kampanye dibuat (maksimal 8 foto).
+                                        </p>
                                         {imagePreview && (
                                             <img
                                                 src={imagePreview}

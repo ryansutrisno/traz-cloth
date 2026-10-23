@@ -28,6 +28,7 @@ type Campaign = {
     title: string;
     description: string | null;
     image_url: string | null;
+    images: string[];
     base_price: number;
     quota: number;
     sold_count: number;
@@ -77,6 +78,9 @@ export default function CampaignsShow({
     const [selectedSize, setSelectedSize] = useState('');
     const [qty, setQty] = useState(1);
     const [adding, setAdding] = useState(false);
+    const [activeImage, setActiveImage] = useState<string | null>(
+        campaign.images[0] ?? campaign.image_url,
+    );
 
     const canBuy = available > 0 && !is_sold_out;
 
@@ -144,9 +148,9 @@ export default function CampaignsShow({
                     <div className="flex flex-col gap-10 lg:col-span-7">
                         {/* Visual utama */}
                         <div className="relative aspect-square overflow-hidden rounded-xl border bg-muted md:aspect-[4/3]">
-                            {campaign.image_url ? (
+                            {activeImage ? (
                                 <img
-                                    src={campaign.image_url}
+                                    src={activeImage}
                                     alt={campaign.title}
                                     className="size-full object-cover"
                                 />
@@ -161,6 +165,30 @@ export default function CampaignsShow({
                                 Mockup
                             </span>
                         </div>
+                        {campaign.images.length > 1 && (
+                            <div className="flex gap-2 overflow-x-auto">
+                                {campaign.images.map((image, index) => (
+                                    <button
+                                        key={image}
+                                        type="button"
+                                        aria-label={`Lihat foto ${index + 1} ${campaign.title}`}
+                                        data-test="campaign-gallery-thumb"
+                                        className="shrink-0 rounded-lg"
+                                        onClick={() => setActiveImage(image)}
+                                    >
+                                        <img
+                                            src={image}
+                                            alt=""
+                                            className={`size-16 rounded-lg border-2 object-cover ${
+                                                activeImage === image
+                                                    ? 'border-primary'
+                                                    : 'border-transparent hover:border-muted-foreground/40'
+                                            }`}
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+                        )}
 
                         {/* Tentang desain */}
                         <section className="flex flex-col gap-4">

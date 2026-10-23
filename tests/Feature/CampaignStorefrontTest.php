@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\Size;
 use App\Models\Campaign;
+use App\Models\CampaignImage;
 use App\Models\CampaignSize;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
@@ -122,6 +123,21 @@ class CampaignStorefrontTest extends TestCase
             ->where('price_by_size.L.price', 105000)
             ->where('price_by_size.XL.price', 115000)
             ->where('price_by_size.XXL.price', 120000),
+        );
+    }
+
+    public function test_campaign_detail_sends_gallery_images(): void
+    {
+        $image = CampaignImage::factory()->for($this->campaign)->create([
+            'path' => 'campaigns/detail.png',
+            'is_primary' => true,
+        ]);
+
+        $response = $this->getInertia(route('campaigns.show', $this->campaign->slug));
+
+        $response->assertInertia(fn (Assert $page) => $page
+            ->has('campaign.images', 1)
+            ->where('campaign.images.0', $image->url),
         );
     }
 

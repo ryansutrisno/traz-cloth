@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CampaignStoreRequest;
 use App\Http\Requests\Admin\CampaignUpdateRequest;
 use App\Models\Campaign;
+use App\Models\CampaignImage;
 use App\Models\CampaignSize;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -118,7 +119,10 @@ class CampaignController extends Controller
 
     public function edit(Campaign $campaign): Response
     {
-        $campaign->load(['sizes' => fn (HasMany $query): HasMany => $query->orderBy('size')]);
+        $campaign->load([
+            'sizes' => fn (HasMany $query): HasMany => $query->orderBy('size'),
+            'images',
+        ]);
 
         return Inertia::render('admin/campaigns/edit', [
             'campaign' => [
@@ -140,6 +144,12 @@ class CampaignController extends Controller
                     'enabled' => $campaignSize->enabled,
                 ])->values()->all(),
             ],
+            'images' => $campaign->images->map(fn (CampaignImage $campaignImage): array => [
+                'id' => $campaignImage->id,
+                'url' => $campaignImage->url,
+                'is_primary' => $campaignImage->is_primary,
+                'sort_order' => $campaignImage->sort_order,
+            ])->values()->all(),
             'sizes' => array_map(fn (Size $size): string => $size->value, Size::cases()),
             'statuses' => array_map(fn (CampaignStatus $status): string => $status->value, CampaignStatus::cases()),
         ]);
@@ -200,6 +210,18 @@ class CampaignController extends Controller
             return back()->withErrors([
                 'sold_count' => 'Kampanye dengan pembayaran aktif tidak bisa dihapus.',
             ]);
+        }
+
+        foreach ($campaign->images as $image) {
+            if ($this->isLocalImagePath($image->path)) {
+                Storage::disk('public')->delete($image->path);
+            }
+        }
+
+        $imagePath = $campaign->getRawOriginal('image_url');
+
+        if ($this->isLocalImagePath($imagePath)) {
+            Storage::disk('public')->delete($imagePath);
         }
 
         $campaign->delete();
