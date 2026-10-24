@@ -17,6 +17,8 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class ProcessMidtransWebhook implements ShouldQueue
 {
@@ -140,5 +142,26 @@ class ProcessMidtransWebhook implements ShouldQueue
             'processed' => true,
             'error' => $error,
         ]);
+    }
+
+    public function failed(?Throwable $exception = null): void
+    {
+        try {
+            Log::error('[Midtrans] Webhook job failed', [
+                'log_id' => $this->logId,
+                'exception' => $exception?->getMessage(),
+            ]);
+
+            $log = WebhookLog::query()->find($this->logId);
+
+            if ($log !== null) {
+                $log->update([
+                    'processed' => false,
+                    'error' => substr($exception?->getMessage() ?: 'Midtrans webhook job gagal.', 0, 500),
+                ]);
+            }
+        } catch (Throwable) {
+            // Failure callbacks must not mask the original queue exception.
+        }
     }
 }
