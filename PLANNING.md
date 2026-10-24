@@ -495,10 +495,9 @@ traz-cloth/
 
 ## 11. Item Lanjutan (Backlog — Belum Diputuskan)
 
-- Pengiriman otomatis label/PDF via Biteship (opsional).
-- Notifikasi email tambahan (selain WA).
-- Backup & restore otomatis PostgreSQL (jadwal Dokploy).
-- Pemantauan (monitoring) error via log/sentry.
+> Label pengiriman diputuskan di §16; monitoring error diputuskan di §15.
+>
+> Catatan: backup PostgreSQL **sudah berjalan** via command `app:db-backup` (scheduler harian 02:00, retensi otomatis, format custom `pg_dump`). Sisa pekerjaan hanya prosedur restore manual di sisi ops/Dokploy.
 
 ---
 
@@ -528,6 +527,44 @@ traz-cloth/
 | G4 | Format `jpg/jpeg/png/webp`, maksimal **2 MB** per foto |
 | G5 | Admin dapat menambah, menghapus, dan memilih foto utama (tanpa drag-and-drop urutan) |
 | G6 | File dihapus dari storage saat foto dihapus atau kampanye dihapus |
+
+---
+
+## 14. Notifikasi Email (Diputuskan 2026-10-23)
+
+| # | Keputusan |
+|---|-----------|
+| E1 | Email dikirim untuk event: order dibuat, DP diterima, siap kirim (link pelunasan), dikirim (resi), delivered, dan pembatalan |
+| E2 | Email bersifat **pelengkap** WhatsApp, bukan pengganti; kegagalan email tidak menggagalkan perubahan status order |
+| E3 | Pengiriman lewat **queue** (`ShouldQueue`) agar tidak memperlambat request/transisi status |
+| E4 | Audit pengiriman disimpan di tabel `email_messages` mengikuti pola `wa_messages` (status, error, `sent_at`) |
+| E5 | Tujuan email = `users.email`; pengiriman dilewati bila kosong |
+| E6 | Template memakai Blade sederhana dengan identitas toko, bukan Markdown Mail |
+| E7 | Hanya email **transaksional** (tanpa newsletter/marketing) |
+
+---
+
+## 15. Monitoring & Alerting (Diputuskan 2026-10-24)
+
+| # | Keputusan |
+|---|-----------|
+| M1 | Monitoring fase ini memakai fitur bawaan Laravel (log channel + tabel `failed_jobs`), **tanpa package baru** |
+| M2 | Channel `slack` diaktifkan hanya lewat env produksi (`LOG_STACK=slack,daily` + `LOG_SLACK_WEBHOOK_URL`); default dev/test tetap `single` |
+| M3 | Setiap job queue memiliki `failed()` yang mencatat error ke log dan, bila relevan, ke tabel audit (`webhook_logs`, `wa_messages`, `email_messages`) |
+| M4 | Health check memakai route bawaan `GET /up`; Telescope/Pulse tidak dipasang |
+| M5 | Sentry ditunda; dipertimbangkan hanya bila volume error produksi menuntut traceback terpusat |
+
+---
+
+## 16. Label Pengiriman (Diputuskan 2026-10-24)
+
+| # | Keputusan |
+|---|-----------|
+| L1 | Biteship tidak menyediakan Label API, sehingga label dirender sendiri dari data order |
+| L2 | Fase ini memakai **halaman HTML cetak** (`window.print()`) ukuran 105×203 mm (4×6 inci), bukan PDF server-side |
+| L3 | Label memuat nomor order, kurir + layanan, nomor resi, alamat pengirim dari config Biteship, alamat penerima, serta berat/dimensi item |
+| L4 | Tombol "Cetak Label" hanya tampil di detail order admin bila `resi_number` sudah terisi |
+| L5 | Tidak menambah package PDF (dompdf) sampai ada kebutuhan integrasi kurir yang menuntut berkas PDF |
 
 ---
 

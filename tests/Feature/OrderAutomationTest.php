@@ -221,7 +221,7 @@ class OrderAutomationTest extends TestCase
 
         app(OrderService::class)->cancel($order, OrderStatus::DibatalkanBuyer);
 
-        Queue::assertNothingPushed();
+        Queue::assertNotPushed(SendWhatsAppMessage::class);
     }
 
     public function test_status_notification_is_not_dispatched_when_phone_is_empty(): void
@@ -233,7 +233,7 @@ class OrderAutomationTest extends TestCase
         $orderService->markProduksi($order);
         $orderService->markSiapKirim($order);
 
-        Queue::assertNothingPushed();
+        Queue::assertNotPushed(SendWhatsAppMessage::class);
     }
 
     public function test_payment_reminder_is_sent_once_after_twelve_hours(): void
