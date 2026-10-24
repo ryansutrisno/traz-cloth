@@ -84,4 +84,25 @@ class ProcessBiteshipWebhook implements ShouldQueue
             throw $exception;
         }
     }
+
+    public function failed(?Throwable $exception = null): void
+    {
+        try {
+            Log::error('[Biteship] Webhook job failed', [
+                'log_id' => $this->logId,
+                'exception' => $exception?->getMessage(),
+            ]);
+
+            $log = WebhookLog::query()->find($this->logId);
+
+            if ($log !== null) {
+                $log->update([
+                    'processed' => false,
+                    'error' => substr($exception?->getMessage() ?: 'Biteship webhook job gagal.', 0, 500),
+                ]);
+            }
+        } catch (Throwable) {
+            // Failure callbacks must not mask the original queue exception.
+        }
+    }
 }

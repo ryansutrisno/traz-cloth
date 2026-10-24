@@ -14,6 +14,7 @@ use App\Models\Payment;
 use App\Services\BiteshipService;
 use App\Services\OrderService;
 use DomainException;
+use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -95,6 +96,17 @@ class OrderController extends Controller
         $order->load(['user', 'address', 'items.campaign', 'payments', 'statusHistories']);
 
         return Inertia::render('admin/orders/show', $this->orderShowProps($order));
+    }
+
+    public function label(Order $order): View
+    {
+        $order->load(['items.campaign', 'address', 'user']);
+
+        abort_unless(filled($order->resi_number), 404);
+
+        return view('labels.order', [
+            'order' => $order,
+        ]);
     }
 
     public function courierRates(Request $request, Order $order): Response|RedirectResponse
