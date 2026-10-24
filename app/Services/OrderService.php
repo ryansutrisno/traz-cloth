@@ -8,6 +8,7 @@ use App\Enums\PaymentMode;
 use App\Enums\PaymentStatus;
 use App\Enums\PaymentType;
 use App\Enums\Size;
+use App\Jobs\SendEmailMessage;
 use App\Jobs\SendWhatsAppMessage;
 use App\Models\Campaign;
 use App\Models\CampaignSize;
@@ -21,6 +22,7 @@ use App\Models\User;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Throwable;
 
 class OrderService
 {
@@ -182,6 +184,8 @@ class OrderService
             $this->recordStatusHistory($order, OrderStatus::MenungguPembayaran, 'Order dibuat');
             CartItem::query()->where('user_id', $user->id)->delete();
 
+            $this->queueEmailAfterCommit($order->id, 'order_created');
+
             return $order->load('items');
         });
     }
@@ -205,7 +209,7 @@ class OrderService
 
     public function markDpPaid(Order $order, Payment $payment, ?string $note = 'DP dibayar'): Order
     {
-        return DB::transaction(function () use ($order, $payment, $note): Order {
+        $updatedOrder = DB::transaction(function () use ($order, $payment, $note): Order {
             $this->assertPaymentBelongsToOrder($order, $payment);
 
             if ($order->status !== OrderStatus::MenungguPembayaran
@@ -222,6 +226,13 @@ class OrderService
 
             return $this->recordStatusHistory($order, OrderStatus::DpDibayar, $note);
         });
+
+        $this->queueEmailAfterCommit($updatedOrder->id, 'dp_received', [
+            'paid_amount' => (float) $payment->amount,
+            'payment_label' => 'DP',
+        ]);
+
+        return $updatedOrder;
     }
 
     public function markPaid(Order $order, Payment $payment): Order
@@ -231,7 +242,7 @@ class OrderService
 
     public function markLunas(Order $order, Payment $payment, ?string $note = 'Pembayaran lunas'): Order
     {
-        return DB::transaction(function () use ($order, $payment, $note): Order {
+        $updatedOrder = DB::transaction(function () use ($order, $payment, $note): Order {
             $lockedOrder = Order::query()->lockForUpdate()->findOrFail($order->id);
             $this->assertPaymentBelongsToOrder($lockedOrder, $payment);
 
@@ -257,6 +268,13 @@ class OrderService
 
             return $this->recordStatusHistory($lockedOrder, OrderStatus::Lunas, $note);
         });
+
+        $this->queueEmailAfterCommit($updatedOrder->id, 'dp_received', [
+            'paid_amount' => (float) $payment->amount,
+            'payment_label' => $payment->payment_type === PaymentType::Full ? 'Pembayaran penuh' : 'Pelunasan',
+        ]);
+
+        return $updatedOrder;
     }
 
     public function complete(Order $order): Order
@@ -276,7 +294,7 @@ class OrderService
 
     public function cancel(Order $order, OrderStatus $status, ?string $note = null): Order
     {
-        return DB::transaction(function () use ($order, $status, $note): Order {
+        $updatedOrder = DB::transaction(function () use ($order, $status, $note): Order {
             $lockedOrder = Order::query()->lockForUpdate()->findOrFail($order->id);
 
             if (! in_array($status, [OrderStatus::DibatalkanBuyer, OrderStatus::DibatalkanSistem], true)) {
@@ -308,6 +326,12 @@ class OrderService
 
             return $updatedOrder;
         });
+
+        $this->queueEmailAfterCommit($updatedOrder->id, 'order_cancelled', [
+            'cancel_reason' => $note,
+        ]);
+
+        return $updatedOrder;
     }
 
     public function transition(Order $order, OrderStatus $status, ?string $note = null): void
@@ -382,17 +406,55 @@ class OrderService
             default => null,
         };
 
-        if ($template === null || trim((string) ($order->user?->phone ?? '')) === '') {
+        if ($template === null) {
             return;
         }
 
-        SendWhatsAppMessage::dispatchForOrder($order, $template);
+        if (trim((string) ($order->user?->phone ?? '')) !== '') {
+            SendWhatsAppMessage::dispatchForOrder($order, $template);
 
-        if ($to === OrderStatus::SiapKirim && $order->payment_mode === PaymentMode::Dp) {
-            SendWhatsAppMessage::dispatchForOrder($order, 'payment_link', [
-                'link' => route('orders.show', $order),
-            ]);
+            if ($to === OrderStatus::SiapKirim && $order->payment_mode === PaymentMode::Dp) {
+                SendWhatsAppMessage::dispatchForOrder($order, 'payment_link', [
+                    'link' => route('orders.show', $order),
+                ]);
+            }
         }
+
+        if (trim((string) ($order->user?->email ?? '')) !== '') {
+            SendEmailMessage::dispatchForOrder($order, $template === 'order_status_ready' ? 'order_ready' : match ($template) {
+                'order_status_sent' => 'order_shipped',
+                'order_status_delivered' => 'order_delivered',
+                default => $template,
+            });
+
+            if ($to === OrderStatus::SiapKirim && $order->payment_mode === PaymentMode::Dp) {
+                SendEmailMessage::dispatchForOrder($order, 'payment_link', [
+                    'link' => route('orders.show', $order),
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Queue an email only after the order transaction has committed.
+     *
+     * @param  array<string, mixed>  $extra
+     */
+    private function queueEmailAfterCommit(int $orderId, string $templateKey, array $extra = []): void
+    {
+        DB::afterCommit(function () use ($orderId, $templateKey, $extra): void {
+            try {
+                $order = Order::query()->with('user')->find($orderId);
+
+                if ($order === null || trim((string) ($order->user?->email ?? '')) === '') {
+                    return;
+                }
+
+                SendEmailMessage::dispatchForOrder($order, $templateKey, $extra);
+            } catch (Throwable) {
+                // Email delivery must never break an order transition.
+            }
+        });
     }
 
     private function assertPaymentBelongsToOrder(Order $order, Payment $payment): void
