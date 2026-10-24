@@ -61,6 +61,8 @@ class JobFailureLoggingTest extends TestCase
     public function test_slack_channel_is_available_without_webhook_url(): void
     {
         $this->assertSame('slack', config('logging.channels.slack.driver'));
-        $this->assertNull(config('logging.channels.slack.url'));
+        // `.env.example` mendefinisikan LOG_SLACK_WEBHOOK_URL kosong, sehingga CI
+        // mengembalikan string kosong, bukan null.
+        $this->assertEmpty(config('logging.channels.slack.url'));
     }
 }
