@@ -26,6 +26,7 @@ Route::prefix('admin')->name('admin.')->middleware('web')->group(function (): vo
 
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+        Route::get('/orders/{order}/label', [OrderController::class, 'label'])->name('orders.label');
         Route::post('/orders/{order}/transition', [OrderController::class, 'transition'])->name('orders.transition');
         Route::post('/orders/{order}/courier-rates', [OrderController::class, 'courierRates'])->name('orders.courier-rates');
         Route::post('/orders/{order}/book-courier', [OrderController::class, 'bookCourier'])->name('orders.book-courier');

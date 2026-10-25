@@ -19,6 +19,7 @@ import {
     index as adminOrdersIndex,
     bookCourier,
     courierRates,
+    label,
     transition,
 } from '@/routes/admin/orders';
 
@@ -602,6 +603,23 @@ export default function AdminOrdersShow({
                                                 {order.courier_service}
                                             </p>
                                         )}
+                                        <Button
+                                            asChild
+                                            type="button"
+                                            variant="outline"
+                                            className="w-fit gap-1.5"
+                                            data-test="print-label-button"
+                                        >
+                                            <a
+                                                href={label.url({
+                                                    order: order.id,
+                                                })}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
+                                                Cetak Label
+                                            </a>
+                                        </Button>
                                     </div>
                                 )}
 

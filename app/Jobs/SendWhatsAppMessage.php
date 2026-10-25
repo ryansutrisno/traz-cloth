@@ -11,6 +11,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class SendWhatsAppMessage implements ShouldQueue
@@ -60,6 +61,27 @@ class SendWhatsAppMessage implements ShouldQueue
                 'status' => WaMessageStatus::Failed,
                 'error' => substr($exception->getMessage(), 0, 200),
             ]);
+        }
+    }
+
+    public function failed(?Throwable $exception = null): void
+    {
+        try {
+            Log::error('[WhatsApp] Message job failed', [
+                'wa_message_id' => $this->waMessageId,
+                'exception' => $exception?->getMessage(),
+            ]);
+
+            $waMessage = WaMessage::query()->find($this->waMessageId);
+
+            if ($waMessage !== null && $waMessage->status !== WaMessageStatus::Sent) {
+                $waMessage->update([
+                    'status' => WaMessageStatus::Failed,
+                    'error' => substr($exception?->getMessage() ?: 'WhatsApp message job gagal.', 0, 200),
+                ]);
+            }
+        } catch (Throwable) {
+            // Failure callbacks must not mask the original queue exception.
         }
     }
 
