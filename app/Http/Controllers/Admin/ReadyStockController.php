@@ -23,7 +23,7 @@ class ReadyStockController
             ->latest('updated_at')
             ->paginate(15)
             ->withQueryString();
-        $readyStock->setCollection($readyStock->getCollection()->map(fn (CampaignSize $campaignSize): array => [
+        $readyStock = $readyStock->through(fn (CampaignSize $campaignSize): array => [
             'id' => $campaignSize->id,
             'campaign_id' => $campaignSize->campaign->id,
             'campaign_slug' => $campaignSize->campaign->slug,
@@ -36,7 +36,7 @@ class ReadyStockController
             'size' => $campaignSize->size->value,
             'stock' => $campaignSize->stock,
             'updated_at' => $campaignSize->updated_at,
-        ])->values());
+        ]);
 
         return Inertia::render('admin/ready-stock', [
             'ready_stock' => $readyStock,

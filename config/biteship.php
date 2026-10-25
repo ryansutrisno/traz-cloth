@@ -11,7 +11,9 @@ return [
         'postal_code' => (int) env('BITESHIP_ORIGIN_POSTAL_CODE', 0),
     ],
 
-    'couriers' => explode(',', env('BITESHIP_COURIERS', 'jne,sicepat,anteraja,jnt,pos')),
+    'couriers' => explode(',', is_string($couriers = env('BITESHIP_COURIERS', 'jne,sicepat,anteraja,jnt,pos'))
+        ? $couriers
+        : 'jne,sicepat,anteraja,jnt,pos'),
     'item_weight_grams' => (int) env('BITESHIP_ITEM_WEIGHT_GRAMS', 250),
     'item_length_cm' => 30,
     'item_width_cm' => 25,

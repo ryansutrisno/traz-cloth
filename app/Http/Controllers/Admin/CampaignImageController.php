@@ -33,7 +33,7 @@ class CampaignImageController extends Controller
         foreach ($files as $index => $file) {
             $path = Storage::disk('public')->putFile('campaigns', $file);
 
-            if ($path === false || $path === null) {
+            if ($path === false) {
                 throw new RuntimeException('Gambar kampanye gagal disimpan.');
             }
 

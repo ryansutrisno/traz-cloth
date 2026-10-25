@@ -4,13 +4,13 @@ namespace App\Models;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMode;
+use Carbon\CarbonInterface;
 use Database\Factories\OrderFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -24,7 +24,7 @@ use Illuminate\Support\Carbon;
  * @property string $subtotal
  * @property string $total_amount
  * @property string|null $dp_amount
- * @property Carbon|null $payment_due_at
+ * @property CarbonInterface|null $payment_due_at
  * @property string|null $buyer_notes
  * @property int|null $address_id
  * @property string|null $shipping_cost
@@ -32,8 +32,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $courier_service
  * @property string|null $resi_number
  * @property string|null $biteship_order_id
- * @property Carbon|null $shipped_at
- * @property Carbon|null $delivered_at
+ * @property CarbonInterface|null $shipped_at
+ * @property CarbonInterface|null $delivered_at
  */
 #[Fillable(['user_id', 'order_number', 'status', 'payment_mode', 'coupon_id', 'coupon_code', 'discount_amount', 'subtotal', 'total_amount', 'dp_amount', 'payment_due_at', 'buyer_notes', 'address_id', 'shipping_cost', 'courier_code', 'courier_service', 'resi_number', 'biteship_order_id', 'shipped_at', 'delivered_at'])]
 class Order extends Model
@@ -44,6 +44,7 @@ class Order extends Model
     /**
      * Get the user who placed the order.
      */
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -52,11 +53,13 @@ class Order extends Model
     /**
      * Get the shipping address for the order.
      */
+    /** @return BelongsTo<Address, $this> */
     public function address(): BelongsTo
     {
         return $this->belongsTo(Address::class);
     }
 
+    /** @return BelongsTo<Coupon, $this> */
     public function coupon(): BelongsTo
     {
         return $this->belongsTo(Coupon::class);
@@ -65,6 +68,7 @@ class Order extends Model
     /**
      * Get the items belonging to the order.
      */
+    /** @return HasMany<OrderItem, $this> */
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
@@ -73,6 +77,7 @@ class Order extends Model
     /**
      * Get the status history entries for the order.
      */
+    /** @return HasMany<OrderStatusHistory, $this> */
     public function statusHistories(): HasMany
     {
         return $this->hasMany(OrderStatusHistory::class);
@@ -81,6 +86,7 @@ class Order extends Model
     /**
      * Get the payments recorded for the order.
      */
+    /** @return HasMany<Payment, $this> */
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Enums\CampaignStatus;
+use App\Models\Campaign;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -20,13 +21,16 @@ class CampaignUpdateRequest extends FormRequest
      */
     public function rules(): array
     {
+        $campaign = $this->route('campaign');
+        $campaignId = $campaign instanceof Campaign ? $campaign->id : null;
+
         return [
             'title' => ['required', 'string', 'max:255'],
             'slug' => [
                 'nullable',
                 'string',
                 'max:255',
-                'unique:campaigns,slug,'.$this->route('campaign')->id,
+                'unique:campaigns,slug,'.$campaignId,
             ],
             'description' => ['nullable', 'string'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],

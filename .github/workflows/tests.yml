@@ -34,9 +34,8 @@ jobs:
       - name: Setup Application
         run: composer setup
 
-      - name: Static analysis (informational — does not fail the build)
+      - name: Static analysis
         run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
-        continue-on-error: true
 
       - name: Run CI Checks
         run: composer ci:check

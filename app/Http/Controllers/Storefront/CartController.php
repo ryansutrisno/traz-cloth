@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Storefront;
 use App\Enums\Size;
 use App\Http\Controllers\Controller;
 use App\Models\CartItem;
+use App\Models\User;
 use App\Services\CartService;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
@@ -20,7 +21,7 @@ class CartController extends Controller
 
     public function index(Request $request): Response
     {
-        $user = $request->user();
+        $user = $this->cartUser($request);
         $items = $this->cartService->itemsFor($user);
         $total = $items->sum(fn (CartItem $item): int => (int) $item->getAttribute('subtotal'));
 
@@ -41,7 +42,7 @@ class CartController extends Controller
 
         try {
             $this->cartService->add(
-                $request->user(),
+                $this->cartUser($request),
                 (int) $data['campaign_id'],
                 $data['size'],
                 (int) $data['qty'],
@@ -65,7 +66,7 @@ class CartController extends Controller
         ]);
 
         try {
-            $this->cartService->updateQty($request->user(), $cartItem, (int) $data['qty']);
+            $this->cartService->updateQty($this->cartUser($request), $cartItem, (int) $data['qty']);
         } catch (DomainException|ValidationException $exception) {
             return back()->withErrors(['qty' => $exception->getMessage()]);
         }
@@ -76,18 +77,27 @@ class CartController extends Controller
     public function destroy(Request $request, int $cartItem): RedirectResponse
     {
         $this->ensureOwnership($request, $cartItem);
-        $this->cartService->remove($request->user(), $cartItem);
+        $this->cartService->remove($this->cartUser($request), $cartItem);
 
         return back();
     }
 
     private function ensureOwnership(Request $request, int $cartItemId): void
     {
-        if ($request->user() === null) {
+        $user = $this->cartUser($request);
+
+        if ($user === null) {
             return;
         }
 
         $cartItem = CartItem::query()->findOrFail($cartItemId);
-        abort_unless($cartItem->user_id === $request->user()->id, 403);
+        abort_unless($cartItem->user_id === $user->id, 403);
+    }
+
+    private function cartUser(Request $request): ?User
+    {
+        $user = $request->user();
+
+        return $user instanceof User ? $user : null;
     }
 }

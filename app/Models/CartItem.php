@@ -25,6 +25,7 @@ class CartItem extends Model
     /**
      * Get the user who owns the cart item.
      */
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -33,6 +34,7 @@ class CartItem extends Model
     /**
      * Get the campaign in the cart item.
      */
+    /** @return BelongsTo<Campaign, $this> */
     public function campaign(): BelongsTo
     {
         return $this->belongsTo(Campaign::class);

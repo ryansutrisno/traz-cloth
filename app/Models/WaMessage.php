@@ -29,6 +29,7 @@ class WaMessage extends Model
     /**
      * Get the order associated with the WhatsApp message.
      */
+    /** @return BelongsTo<Order, $this> */
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);

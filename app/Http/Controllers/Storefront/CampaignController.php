@@ -11,7 +11,7 @@ use App\Models\CampaignSize;
 use App\Services\PricingService;
 use App\Services\QuotaService;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -66,7 +66,7 @@ class CampaignController extends Controller
                     ->whereColumn('sold_count', '>=', 'quota')
                     ->whereDoesntHave('sizes', fn (Builder $query): Builder => $query->where('stock', '>', 0));
             })
-            ->with(['sizes' => fn (HasMany $query): HasMany => $query->where('enabled', true)])
+            ->with(['sizes' => fn (Relation $query): Relation => $query->where('enabled', true)])
             ->paginate(12)
             ->withQueryString();
 
@@ -101,7 +101,7 @@ class CampaignController extends Controller
         $campaign = Campaign::query()
             ->where('slug', $slug)
             ->whereIn('status', [CampaignStatus::Active->value, CampaignStatus::SoldOut->value])
-            ->with(['sizes' => fn (HasMany $query): HasMany => $query->where('enabled', true)])
+            ->with(['sizes' => fn (Relation $query): Relation => $query->where('enabled', true)])
             ->firstOrFail();
 
         $basePrice = (float) $campaign->base_price;

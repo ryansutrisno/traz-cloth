@@ -47,7 +47,7 @@ class CommunicationController
             'user_id' => ['required', 'integer', 'exists:users,id'],
             'message' => ['required', 'string', 'max:1000'],
         ]);
-        $user = User::query()->findOrFail($data['user_id']);
+        $user = User::query()->whereKey($data['user_id'])->firstOrFail();
         $waMessage = WaMessage::query()->create([
             'order_id' => null,
             'phone' => (string) $user->phone,

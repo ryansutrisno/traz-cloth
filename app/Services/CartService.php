@@ -62,7 +62,7 @@ class CartService
                 if ((int) ($item['campaign_id'] ?? 0) === $campaignId
                     && (string) ($item['size'] ?? '') === $normalizedSize->value) {
                     $existingIndex = (int) $index;
-                    $currentQty = (int) $item['qty'];
+                    $currentQty = (int) ($item['qty'] ?? 0);
                     break;
                 }
             }
@@ -287,7 +287,7 @@ class CartService
     }
 
     /**
-     * @return array<int, array{campaign_id: int, size: string, qty: int}>
+     * @return array<int, array{campaign_id?: int, size?: string, qty?: int}>
      */
     private function guestCart(): array
     {

@@ -83,6 +83,7 @@ class OrderService
         throw new DomainException('Nomor order tidak dapat dibuat.');
     }
 
+    /** @param array<string, mixed> $shipping */
     public function createFromCart(User $user, PaymentMode $paymentMode, array $shipping = [], ?Coupon $coupon = null): Order
     {
         return DB::transaction(function () use ($user, $paymentMode, $shipping, $coupon): Order {
@@ -410,7 +411,9 @@ class OrderService
             return;
         }
 
-        if (trim((string) ($order->user?->phone ?? '')) !== '') {
+        $user = $order->getRelationValue('user');
+
+        if (trim((string) ($user instanceof User ? $user->phone : null)) !== '') {
             SendWhatsAppMessage::dispatchForOrder($order, $template);
 
             if ($to === OrderStatus::SiapKirim && $order->payment_mode === PaymentMode::Dp) {
@@ -420,12 +423,13 @@ class OrderService
             }
         }
 
-        if (trim((string) ($order->user?->email ?? '')) !== '') {
-            SendEmailMessage::dispatchForOrder($order, $template === 'order_status_ready' ? 'order_ready' : match ($template) {
+        if (trim((string) ($user instanceof User ? $user->email : null)) !== '') {
+            $emailTemplate = [
+                'order_status_ready' => 'order_ready',
                 'order_status_sent' => 'order_shipped',
                 'order_status_delivered' => 'order_delivered',
-                default => $template,
-            });
+            ][$template];
+            SendEmailMessage::dispatchForOrder($order, $emailTemplate);
 
             if ($to === OrderStatus::SiapKirim && $order->payment_mode === PaymentMode::Dp) {
                 SendEmailMessage::dispatchForOrder($order, 'payment_link', [
@@ -446,7 +450,9 @@ class OrderService
             try {
                 $order = Order::query()->with('user')->find($orderId);
 
-                if ($order === null || trim((string) ($order->user?->email ?? '')) === '') {
+                $user = $order?->getRelationValue('user');
+
+                if (! $user instanceof User || trim($user->email) === '') {
                     return;
                 }
 

@@ -16,7 +16,8 @@ class AddressController extends Controller
     public function index(Request $request): Response
     {
         $search = $request->string('q')->trim()->toString();
-        $addresses = $request->user()->addresses()
+        $user = $this->authenticatedUser($request);
+        $addresses = $user->addresses()
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($query) use ($search): void {
                     $query
@@ -50,7 +51,7 @@ class AddressController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
-        $user = $request->user();
+        $user = $this->authenticatedUser($request);
 
         DB::transaction(function () use ($data, $user): void {
             $isFirst = ! $user->addresses()->exists();
@@ -74,7 +75,7 @@ class AddressController extends Controller
     {
         $this->ensureOwnership($request, $address);
         $data = $this->validated($request);
-        $user = $request->user();
+        $user = $this->authenticatedUser($request);
 
         DB::transaction(function () use ($data, $user, $address): void {
             $isDefault = (bool) ($data['is_default'] ?? false);
@@ -100,7 +101,7 @@ class AddressController extends Controller
 
         DB::transaction(function () use ($request, $address): void {
             if ($address->is_default) {
-                $replacement = $request->user()->addresses()
+                $replacement = $this->authenticatedUser($request)->addresses()
                     ->whereKeyNot($address->id)
                     ->latest('updated_at')
                     ->first();
@@ -135,7 +136,7 @@ class AddressController extends Controller
 
     private function ensureOwnership(Request $request, Address $address): void
     {
-        abort_unless($address->user_id === $request->user()->id, 403);
+        abort_unless($address->user_id === $this->authenticatedUser($request)->id, 403);
     }
 
     private function clearDefaults(User $user, ?int $exceptId = null): void
@@ -143,5 +144,13 @@ class AddressController extends Controller
         $user->addresses()
             ->when($exceptId !== null, fn ($query) => $query->whereKeyNot($exceptId))
             ->update(['is_default' => false]);
+    }
+
+    private function authenticatedUser(Request $request): User
+    {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        return $user;
     }
 }
