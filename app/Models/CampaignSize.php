@@ -26,6 +26,7 @@ class CampaignSize extends Model
     /**
      * Get the campaign that owns the size configuration.
      */
+    /** @return BelongsTo<Campaign, $this> */
     public function campaign(): BelongsTo
     {
         return $this->belongsTo(Campaign::class);

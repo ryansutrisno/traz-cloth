@@ -24,6 +24,12 @@ use Illuminate\Support\Str;
  * @property int $sold_count
  * @property CampaignStatus $status
  * @property bool $ready_stock_enabled
+ * @property int|float|string|null $qty_terjual
+ * @property int|float|string|null $revenue_dp
+ * @property int|float|string|null $revenue_pelunasan
+ * @property int|float|string|null $revenue_full
+ * @property int|float|string|null $revenue_total
+ * @property int|float|string|null $biaya_produksi
  */
 #[Fillable(['slug', 'title', 'description', 'image_url', 'base_price', 'cost_per_item', 'quota', 'sold_count', 'status', 'ready_stock_enabled'])]
 class Campaign extends Model
@@ -49,6 +55,7 @@ class Campaign extends Model
     /**
      * Get the public URL for the campaign image while preserving legacy URLs.
      */
+    /** @return Attribute<string|null, never> */
     protected function imageUrl(): Attribute
     {
         return Attribute::make(
@@ -65,6 +72,7 @@ class Campaign extends Model
     /**
      * Get the sizes configured for the campaign.
      */
+    /** @return HasMany<CampaignSize, $this> */
     public function sizes(): HasMany
     {
         return $this->hasMany(CampaignSize::class);
@@ -73,6 +81,7 @@ class Campaign extends Model
     /**
      * Get the campaign gallery images in display order.
      */
+    /** @return HasMany<CampaignImage, $this> */
     public function images(): HasMany
     {
         return $this->hasMany(CampaignImage::class)

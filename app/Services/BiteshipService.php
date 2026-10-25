@@ -13,6 +13,7 @@ use Throwable;
 
 class BiteshipService
 {
+    /** @param array<int, mixed> $items */
     public function __construct(private array $items = []) {}
 
     /**
@@ -37,6 +38,8 @@ class BiteshipService
     /**
      * Get available courier rates for a destination postal code.
      *
+     * @param  array<int, mixed>  $items
+     * @param  array<int, string>|null  $couriers
      * @return array<int, array{courier_code: string, courier_service_code: string, service_type: string, price: int, duration: mixed, shipment_duration_range: mixed}>
      */
     public function getRates(array $items, string $destinationPostalCode, ?array $couriers = null): array

@@ -31,6 +31,7 @@ class Address extends Model
     /**
      * Get the user who owns the address.
      */
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

@@ -22,11 +22,13 @@ use Illuminate\Support\Carbon;
 #[Fillable(['order_id', 'user_id', 'email', 'template_key', 'payload', 'status', 'error', 'sent_at'])]
 class EmailMessage extends Model
 {
+    /** @return BelongsTo<Order, $this> */
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

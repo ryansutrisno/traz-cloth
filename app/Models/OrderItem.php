@@ -28,6 +28,7 @@ class OrderItem extends Model
     /**
      * Get the order containing the item.
      */
+    /** @return BelongsTo<Order, $this> */
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
@@ -36,6 +37,7 @@ class OrderItem extends Model
     /**
      * Get the campaign purchased in the item.
      */
+    /** @return BelongsTo<Campaign, $this> */
     public function campaign(): BelongsTo
     {
         return $this->belongsTo(Campaign::class);

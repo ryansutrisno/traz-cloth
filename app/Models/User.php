@@ -40,6 +40,7 @@ class User extends Authenticatable implements PasskeyUser
     /**
      * Get the user's saved shipping addresses.
      */
+    /** @return HasMany<Address, $this> */
     public function addresses(): HasMany
     {
         return $this->hasMany(Address::class);

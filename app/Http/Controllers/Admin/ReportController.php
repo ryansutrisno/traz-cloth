@@ -65,7 +65,7 @@ class ReportController
         $allRows = (clone $reportQuery)->get();
         $report = $reportQuery->paginate(15)->withQueryString();
 
-        $report->setCollection($report->getCollection()->map(fn (object $row): array => $this->reportRow($row))->values());
+        $report = $report->through(fn (Campaign $campaign): array => $this->reportRow($campaign));
 
         return Inertia::render('admin/laporan', [
             'report' => $report,
@@ -80,7 +80,7 @@ class ReportController
     /**
      * @return array<string, mixed>
      */
-    private function reportRow(object $row): array
+    private function reportRow(Campaign $row): array
     {
         $revenueTotal = (float) $row->revenue_total;
         $productionCost = (float) $row->biaya_produksi;

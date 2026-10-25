@@ -63,6 +63,6 @@ class OtpService
             return 0;
         }
 
-        return max(0, 60 - Carbon::now()->diffInSeconds($otp->created_at, true));
+        return (int) max(0, 60 - Carbon::now()->diffInSeconds($otp->created_at, true));
     }
 }

@@ -3,9 +3,11 @@
 namespace App\Jobs;
 
 use App\Enums\EmailMessageStatus;
+use App\Models\Campaign;
 use App\Models\EmailMessage;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Mail\Mailer;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -32,7 +34,8 @@ class SendEmailMessage implements ShouldQueue
     {
         try {
             $order->loadMissing(['user', 'items.campaign']);
-            $email = trim((string) ($order->user?->email ?? ''));
+            $user = $order->getRelationValue('user');
+            $email = trim((string) ($user instanceof User ? $user->email : null));
 
             if ($email === '') {
                 return;
@@ -87,13 +90,14 @@ class SendEmailMessage implements ShouldQueue
     {
         $totalAmount = (float) $order->total_amount;
         $dpAmount = $order->dp_amount === null ? null : (float) $order->dp_amount;
+        $user = $order->getRelationValue('user');
 
         return array_merge([
             'store_name' => config('app.name', 'Traz Cloth'),
-            'name' => (string) ($order->user?->name ?? 'Pelanggan'),
+            'name' => (string) ($user instanceof User ? $user->name : 'Pelanggan'),
             'order_number' => (string) $order->order_number,
             'items' => $order->items->map(fn (OrderItem $item): array => [
-                'title' => (string) ($item->campaign?->title ?? 'Produk'),
+                'title' => (string) (($campaign = $item->getRelationValue('campaign')) instanceof Campaign ? $campaign->title : 'Produk'),
                 'size' => $item->size->value,
                 'qty' => $item->qty,
                 'total_price' => (float) $item->total_price,

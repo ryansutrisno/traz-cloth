@@ -8,7 +8,7 @@ use App\Models\Campaign;
 use App\Models\CampaignSize;
 use App\Services\PricingService;
 use App\Services\QuotaService;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -24,7 +24,7 @@ class HomeController extends Controller
     {
         $featuredCampaigns = Campaign::query()
             ->where('status', CampaignStatus::Active->value)
-            ->with(['sizes' => fn (HasMany $query): HasMany => $query->where('enabled', true)])
+            ->with(['sizes' => fn (Relation $query): Relation => $query->where('enabled', true)])
             ->latest()
             ->limit(6)
             ->get()

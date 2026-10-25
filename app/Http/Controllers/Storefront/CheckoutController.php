@@ -37,7 +37,7 @@ class CheckoutController extends Controller
 
     public function index(Request $request): Response
     {
-        $user = $request->user();
+        $user = $this->authenticatedUser($request);
         $items = $this->cartService->itemsFor($user);
         $subtotal = $this->subtotal($items);
 
@@ -49,9 +49,9 @@ class CheckoutController extends Controller
         $data = $request->validate([
             'address_id' => ['required', 'integer', 'exists:addresses,id'],
         ]);
-        $address = Address::query()->findOrFail($data['address_id']);
+        $address = Address::query()->whereKey($data['address_id'])->firstOrFail();
         $this->ensureAddressOwnership($request, $address);
-        $user = $request->user();
+        $user = $this->authenticatedUser($request);
         $items = $this->cartService->itemsFor($user);
 
         if ($items->isEmpty()) {
@@ -87,9 +87,9 @@ class CheckoutController extends Controller
             'courier_service' => ['required', 'string'],
             'shipping_cost' => ['required', 'numeric', 'min:0'],
         ]);
-        $address = Address::query()->findOrFail($data['address_id']);
+        $address = Address::query()->whereKey($data['address_id'])->firstOrFail();
         $this->ensureAddressOwnership($request, $address);
-        $user = $request->user();
+        $user = $this->authenticatedUser($request);
         $items = $this->cartService->itemsFor($user);
 
         if ($items->isEmpty()) {
@@ -177,7 +177,7 @@ class CheckoutController extends Controller
         $data = $request->validate([
             'code' => ['required', 'string', 'max:50'],
         ]);
-        $user = $request->user();
+        $user = $this->authenticatedUser($request);
         $items = $this->cartService->itemsFor($user);
 
         try {
@@ -257,6 +257,7 @@ class CheckoutController extends Controller
 
     /**
      * @param  iterable<int, CartItem>  $items
+     * @param  array<int, array{courier_code: string, courier_service_code: string, service_type: string, price: int, duration: mixed, shipment_duration_range: mixed}>|null  $rates
      * @return array<string, mixed>
      */
     private function checkoutProps(User $user, iterable $items, int $subtotal, ?array $rates = null, ?int $selectedAddressId = null): array
@@ -335,7 +336,7 @@ class CheckoutController extends Controller
 
     private function ensureAddressOwnership(Request $request, Address $address): void
     {
-        abort_unless($address->user_id === $request->user()->id, 403);
+        abort_unless($address->user_id === $this->authenticatedUser($request)->id, 403);
     }
 
     private function ensureDevelopmentMode(): void
@@ -345,7 +346,15 @@ class CheckoutController extends Controller
 
     private function ensureOwnership(Request $request, Order $order): void
     {
-        abort_unless($order->user_id === $request->user()->id, 403);
+        abort_unless($order->user_id === $this->authenticatedUser($request)->id, 403);
+    }
+
+    private function authenticatedUser(Request $request): User
+    {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        return $user;
     }
 
     /**

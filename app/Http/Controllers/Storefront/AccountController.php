@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Storefront;
 use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\User;
 use App\Services\OtpService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\RedirectResponse;
@@ -18,7 +19,7 @@ class AccountController extends Controller
 {
     public function index(Request $request, OtpService $otpService): Response
     {
-        $user = $request->user();
+        $user = $this->authenticatedUser($request);
         $orders = Order::query()->where('user_id', $user->id);
         $pendingPhone = $request->session()->get('account_phone_pending');
         $pendingPhone = is_string($pendingPhone) ? $pendingPhone : null;
@@ -64,7 +65,7 @@ class AccountController extends Controller
 
     public function updatePhone(Request $request, OtpService $otpService, WhatsAppService $whatsAppService): RedirectResponse
     {
-        $user = $request->user();
+        $user = $this->authenticatedUser($request);
         $validated = $request->validate([
             'phone' => ['required', 'string', 'max:20'],
         ]);
@@ -112,7 +113,7 @@ class AccountController extends Controller
             return back()->withErrors(['otp' => 'Kode OTP salah atau sudah kedaluwarsa.'])->withInput();
         }
 
-        $user = $request->user();
+        $user = $this->authenticatedUser($request);
         $user->update([
             'phone' => $pendingPhone,
             'phone_verified_at' => now(),
@@ -138,5 +139,13 @@ class AccountController extends Controller
         $localPhone = str_starts_with($phone, '62') ? '0'.substr($phone, 2) : $phone;
 
         return substr($localPhone, 0, 4).'****'.substr($localPhone, -4);
+    }
+
+    private function authenticatedUser(Request $request): User
+    {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        return $user;
     }
 }

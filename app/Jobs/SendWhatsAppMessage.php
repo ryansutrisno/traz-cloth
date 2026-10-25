@@ -88,8 +88,9 @@ class SendWhatsAppMessage implements ShouldQueue
     private function renderMessage(WaMessage $waMessage): string
     {
         $payload = array_map(static fn (mixed $value): string => (string) $value, $waMessage->payload);
-        $name = $payload['name'] ?? (string) ($waMessage->order?->user?->name ?? 'pelanggan');
-        $orderNumber = $payload['order_number'] ?? (string) ($waMessage->order?->order_number ?? '');
+        $order = $waMessage->getRelationValue('order');
+        $name = $payload['name'] ?? ($order instanceof Order ? $order->user->name : 'pelanggan');
+        $orderNumber = $payload['order_number'] ?? ($order instanceof Order ? $order->order_number : '');
 
         return match ($waMessage->template_key) {
             'manual' => $payload['message'] ?? "Halo {$name}, ada pembaruan untuk pesanan {$orderNumber}. — Traz Cloth",

@@ -24,6 +24,7 @@ class OrderStatusHistory extends Model
     /**
      * Get the order associated with the history entry.
      */
+    /** @return BelongsTo<Order, $this> */
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
