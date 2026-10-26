@@ -66,7 +66,10 @@ class CampaignController extends Controller
                     ->whereColumn('sold_count', '>=', 'quota')
                     ->whereDoesntHave('sizes', fn (Builder $query): Builder => $query->where('stock', '>', 0));
             })
-            ->with(['sizes' => fn (Relation $query): Relation => $query->where('enabled', true)])
+            ->with([
+                'sizes' => fn (Relation $query): Relation => $query->where('enabled', true),
+                'images',
+            ])
             ->paginate(12)
             ->withQueryString();
 
@@ -138,7 +141,7 @@ class CampaignController extends Controller
                 'title' => $campaign->title,
                 'description' => $campaign->description,
                 'image_url' => $campaign->image_url,
-                'images' => $campaign->images()->get()->map(fn (CampaignImage $image): string => $image->url)->values()->all(),
+                'images' => $campaign->images->map(fn (CampaignImage $image): string => $image->url)->values()->all(),
                 'base_price' => (float) $campaign->base_price,
                 'quota' => $campaign->quota,
                 'sold_count' => $campaign->sold_count,
