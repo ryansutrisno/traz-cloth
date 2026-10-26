@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureAdminRole;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,6 +17,23 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $trustedProxiesValue = $_ENV['TRUSTED_PROXIES']
+            ?? $_SERVER['TRUSTED_PROXIES']
+            ?? getenv('TRUSTED_PROXIES');
+        $trustedProxies = trim(is_string($trustedProxiesValue) ? $trustedProxiesValue : '');
+        $trustedProxyAddresses = $trustedProxies === ''
+            ? null
+            : ($trustedProxies === '*'
+                ? '*'
+                : array_values(array_filter(
+                    array_map(
+                        static fn (string $proxy): string => trim($proxy),
+                        explode(',', $trustedProxies),
+                    ),
+                    static fn (string $proxy): bool => $proxy !== '',
+                )));
+
+        $middleware->trustProxies(at: $trustedProxyAddresses);
         $middleware->alias([
             'admin' => EnsureAdminRole::class,
         ]);
@@ -29,6 +47,7 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            SecurityHeaders::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
