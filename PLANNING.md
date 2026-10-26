@@ -551,7 +551,7 @@ traz-cloth/
 | M1 | Monitoring fase ini memakai fitur bawaan Laravel (log channel + tabel `failed_jobs`), **tanpa package baru** |
 | M2 | Channel `slack` diaktifkan hanya lewat env produksi (`LOG_STACK=slack,daily` + `LOG_SLACK_WEBHOOK_URL`); default dev/test tetap `single` |
 | M3 | Setiap job queue memiliki `failed()` yang mencatat error ke log dan, bila relevan, ke tabel audit (`webhook_logs`, `wa_messages`, `email_messages`) |
-| M4 | Health check memakai route bawaan `GET /up`; Telescope/Pulse tidak dipasang |
+| M4 | Health check memakai route bawaan `GET /up` (liveness) dan command `php artisan app:health-check` (readiness komponen); Telescope/Pulse tidak dipasang |
 | M5 | Sentry ditunda; dipertimbangkan hanya bila volume error produksi menuntut traceback terpusat |
 
 ---
@@ -565,6 +565,42 @@ traz-cloth/
 | L3 | Label memuat nomor order, kurir + layanan, nomor resi, alamat pengirim dari config Biteship, alamat penerima, serta berat/dimensi item |
 | L4 | Tombol "Cetak Label" hanya tampil di detail order admin bila `resi_number` sudah terisi |
 | L5 | Tidak menambah package PDF (dompdf) sampai ada kebutuhan integrasi kurir yang menuntut berkas PDF |
+
+---
+
+## 17. Operasional & Hardening Produksi (Diputuskan 2026-10-26)
+
+### 17.1 Command operasional
+
+| Command | Fungsi | Exit code |
+|---------|--------|-----------|
+| `php artisan app:health-check` | Readiness check: koneksi DB, heartbeat scheduler, backlog queue, `failed_jobs` 24 jam, storage writable, dan peringatan env produksi (`APP_DEBUG`, `queue=sync`) | `0` bila tidak ada FAIL (WARN boleh), `1` bila ada FAIL |
+| `php artisan app:health-check --strict` | Sama seperti di atas, tetapi WARN (backlog queue / failed jobs) dihitung sebagai kegagalan | `1` bila ada WARN atau FAIL |
+| `php artisan app:health-check --max-backlog-age=30` | Mengubah ambang umur job yang dianggap backlog (default 10 menit) | mengikuti hasil |
+| `php artisan app:heartbeat` | Menulis cache `scheduler:heartbeat`; dijadwalkan tiap menit sebagai penanda scheduler hidup | `0` |
+| `php artisan app:reconcile-campaigns` | Audit **read-only**: `campaigns.sold_count` vs ekspektasi dari `order_items` (`qty - ready_stock_qty`), `sold_count > quota`, dan `campaign_sizes.stock` negatif | `0` bila bersih, `1` bila ada temuan |
+
+### 17.2 Jadwal scheduler (`routes/console.php`)
+
+| Command | Jadwal |
+|---------|--------|
+| `app:heartbeat` | setiap menit, `withoutOverlapping()` |
+| `orders:auto-cancel` | setiap menit |
+| `orders:payment-reminders` | setiap menit |
+| `campaigns:check-sold-out` | setiap menit |
+| `midtrans:sync-payments` | setiap 15 menit |
+| `biteship:sync-status` | setiap 15 menit |
+| `app:db-backup` | harian 02:00 |
+
+### 17.3 Ketentuan deployment
+
+| # | Ketentuan |
+|---|-----------|
+| H1 | Healthcheck Dokploy diarahkan ke `php artisan app:health-check`; scheduler wajib berjalan agar heartbeat terisi (kalau tidak, health check sengaja FAIL) |
+| H2 | `app:reconcile-campaigns` dijadwalkan harian dan hasilnya diperiksa manual bila exit code `1`; command ini tidak pernah mengubah data |
+| H3 | `LOG_SLACK_WEBHOOK_URL` diisi di produksi lalu `LOG_STACK=slack,daily` untuk alert error (lihat §15 M2) |
+| H4 | Index performa ada di migration `add_performance_indexes` (orders, order_items, payments, campaign_sizes, campaign_images) dan aman dijalankan berulang |
+| H5 | Query storefront dijaga oleh `StorefrontQueryCountTest` (≤ 5 query untuk beranda dan detail kampanye) |
 
 ---
 
