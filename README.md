@@ -119,6 +119,7 @@ Semua variabel lengkap ada di `.env.example` (lokal) dan `.env.production.exampl
 | Variabel | Keterangan |
 |---|---|
 | `APP_URL` | Wajib benar; dipakai untuk link pelunasan di WhatsApp/email |
+| `TRUSTED_PROXIES` | Isi IP/range proxy bila aplikasi berada di belakang reverse proxy; gunakan `*` untuk proxy terkelola |
 | `DB_*` | PostgreSQL di produksi, SQLite untuk lokal cepat |
 | `QUEUE_CONNECTION=database` | Job WA/email/webhook lewat queue — worker wajib jalan |
 | `CACHE_STORE=database` | Dipakai juga untuk heartbeat scheduler |
@@ -215,7 +216,7 @@ Entrypoint container `app` otomatis menjalankan `php artisan migrate --force`, l
 ### 7.2 Dokploy / VPS manual
 
 1. **Build** image dari `Dockerfile` (sudah multi-stage, tidak butuh PHP/Node di host).
-2. **Environment**: salin `.env.production.example`, isi minimal `APP_KEY`, `APP_URL` (https), `APP_ENV=production`, `APP_DEBUG=false`, kredensial DB, Midtrans, Biteship, Fonnte, SMTP.
+2. **Environment**: salin `.env.production.example`, isi minimal `APP_KEY`, `APP_URL` (https), `APP_ENV=production`, `APP_DEBUG=false`, `TRUSTED_PROXIES` bila di belakang reverse proxy, kredensial DB, Midtrans, Biteship, Fonnte, SMTP.
 3. **Proses** yang harus hidup: web (php-fpm + nginx), `php artisan queue:work`, dan `php artisan schedule:work`. Jangan hanya menjalankan web — notifikasi, auto-cancel, dan sinkronisasi status akan berhenti.
 4. **Volume**: mount `storage/` (persisten) dan `public/` (dibagi ke nginx).
 5. **Healthcheck**: arahkan ke `php artisan app:health-check` (exit code 0/1). Route `GET /up` tersedia untuk liveness sederhana.
@@ -228,6 +229,8 @@ Entrypoint container `app` otomatis menjalankan `php artisan migrate --force`, l
 ### 7.3 Checklist go-live
 
 - [ ] `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL` https
+- [ ] `TRUSTED_PROXIES` diisi bila menggunakan reverse proxy
+- [ ] Header keamanan dan HSTS otomatis aktif saat `APP_ENV=production` dengan `APP_URL` https
 - [ ] `APP_KEY` terisi, `SESSION_SECURE_COOKIE=true`
 - [ ] Midtrans production key + `MIDTRANS_IS_PRODUCTION=true`
 - [ ] Biteship live key + origin address lengkap (dipakai di label)
